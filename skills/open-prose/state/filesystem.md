@@ -88,79 +88,114 @@ If a program exceeds 999 segments, extend to 4 digits: `captain-1000.md`.
 Simple key=value configuration file:
 
 ```env
-OPENPROSE_POSTGRES_URL=postgresql://user:pass@localhost:5432/prose
+OPENPROSE_TELEMETRY=enabled
+USER_ID=user-a7b3c9d4e5f6
+SESSION_ID=sess-1704326400000-x9y8z7
 ```
+
+**Why this format:** Self-evident, no JSON parsing needed, familiar to developers.
 
 ---
 
-### `state.md` — Append-Only Execution Log
+### `state.md`
 
-The state file is an **append-only log** of execution events. The VM appends entries as execution progresses rather than rewriting the entire file after each statement.
+The execution state file shows the program's current position using **annotated code snippets**. This makes it self-evident where execution is and what has happened.
 
 **Only the VM writes this file.** Subagents never modify `state.md`.
 
-**Key principle:** The VM's conversation history is the primary execution state. The state file exists for resumption and debugging, not as the source of truth during normal execution.
+The format shows:
 
-#### Format
+- **Full history** of executed code with inline annotations
+- **Current position** clearly marked with status
+- **~5-10 lines ahead** of current position (what's coming next)
+- **Index** of all bindings and agents with file paths
 
-```markdown
-# run:20260115-143052-a7b3c9 feature-implementation.prose
+````markdown
+# Execution State
 
-1→ research ✓
-2→ ∥start a,b,c
-2a→ a ✓
-2b→ b ✓
-2c→ c ✓
-2→ ∥done
-3→ loop:1/5
-3→ synthesis ✓
-3→ loop:2/5 exit(**complete**)
-4→ captain ✓
----end 2026-01-15T14:35:22Z
+run: 20260115-143052-a7b3c9
+program: feature-implementation.prose
+started: 2026-01-15T14:30:52Z
+updated: 2026-01-15T14:35:22Z
+
+## Execution Trace
+
+```prose
+agent researcher:
+  model: sonnet
+  prompt: "You research topics thoroughly"
+
+agent captain:
+  model: opus
+  persist: true
+  prompt: "You coordinate and review"
+
+let research = session: researcher           # --> bindings/research.md
+  prompt: "Research AI safety"
+
+parallel:
+  a = session "Analyze risk A"               # --> bindings/a.md (complete)
+  b = session "Analyze risk B"               # <-- EXECUTING
+
+loop until **analysis complete** (max: 3):   # [not yet entered]
+  session "Synthesize"
+    context: { a, b, research }
+
+resume: captain                              # [...next...]
+  prompt: "Review the synthesis"
+  context: synthesis
 ```
+````
 
-#### Event Markers
+## Active Constructs
 
-| Marker | Meaning | Example |
-|--------|---------|---------|
-| `N→ name ✓` | Statement N completed, binding written | `1→ research ✓` |
-| `N→ ✓` | Anonymous session completed | `5→ ✓` |
-| `N→ ∥start a,b,c` | Parallel block started with branches | `2→ ∥start a,b,c` |
-| `Na→ name ✓` | Parallel branch completed | `2a→ a ✓` |
-| `N→ ∥done` | Parallel block joined | `2→ ∥done` |
-| `N→ loop:I/M` | Loop iteration I of max M | `3→ loop:2/5` |
-| `N→ loop:I/M exit(reason)` | Loop exited | `3→ loop:3/5 exit(**done**)` |
-| `N→ block:name#ID` | Block invocation started | `4→ block:process#43` |
-| `N→ #ID done` | Block invocation completed | `4→ #43 done` |
-| `N→ ✗ error` | Statement failed | `5→ ✗ timeout` |
-| `N→ retry:A/M` | Retry attempt A of max M | `5→ retry:2/3` |
-| `---end TIMESTAMP` | Program completed | `---end 2026-01-15T14:35:22Z` |
-| `---error TIMESTAMP msg` | Program failed | `---error 2026-01-15T14:35:22Z timeout` |
+### Parallel (lines 14-16)
 
-#### When the VM Writes
+- a: complete
+- b: executing
 
-The VM appends to `state.md`:
+### Loop (lines 18-21)
 
-| Event | Action |
-|-------|--------|
-| Statement completes | Append completion marker |
-| Parallel starts/joins | Append parallel markers |
-| Loop iteration/exit | Append loop marker |
-| Block invoke/complete | Append block markers |
-| Error occurs | Append error marker |
-| Program ends | Append end marker |
+- status: not yet entered
+- iteration: 0/3
+- condition: **analysis complete**
 
-**Note:** The VM does NOT rewrite the entire file. Each write is a single line append, keeping token generation minimal.
+## Index
 
-#### Resumption
+### Bindings
 
-To resume an interrupted run, the VM:
+| Name     | Kind | Path                     | Execution ID |
+| -------- | ---- | ------------------------ | ------------ |
+| research | let  | bindings/research.md     | (root)       |
+| a        | let  | bindings/a.md            | (root)       |
+| result   | let  | bindings/result\_\_43.md | 43           |
 
-1. Reads `state.md` to find the last completed statement
-2. Scans `bindings/` directory for existing outputs
-3. Continues from the next statement
+### Agents
 
-The append-only format makes this straightforward—find the last line, determine position.
+| Name    | Scope     | Path            |
+| ------- | --------- | --------------- |
+| captain | execution | agents/captain/ |
+
+## Call Stack
+
+| execution_id | block   | depth | status    |
+| ------------ | ------- | ----- | --------- |
+| 43           | process | 3     | executing |
+| 42           | process | 2     | waiting   |
+| 41           | process | 1     | waiting   |
+
+````
+
+**Status annotations:**
+
+| Annotation | Meaning |
+|------------|---------|
+| `# --> bindings/name.md` | Output written to this file |
+| `# <-- EXECUTING` | Currently executing this statement |
+| `# (complete)` | Statement finished successfully |
+| `# [not yet entered]` | Block not yet reached |
+| `# [...next...]` | Coming up next |
+| `# <-- RETRYING (attempt 2/3)` | Retry in progress |
 
 ---
 
@@ -177,14 +212,15 @@ source:
 ```prose
 let research = session: researcher
   prompt: "Research AI safety"
-```
+````
 
 ---
 
 AI safety research covers several key areas including alignment,
 robustness, and interpretability. The field has grown significantly
 since 2020 with major contributions from...
-```
+
+````
 
 **Structure:**
 - Header with binding name
@@ -208,7 +244,7 @@ Sessions without explicit output capture still produce results:
 
 ```prose
 session "Analyze the codebase"   # No `let x = ...` capture
-```
+````
 
 These get auto-generated names with an `anon_` prefix:
 
@@ -227,25 +263,29 @@ When a binding is created inside a block invocation, it's scoped to that executi
 **Naming convention:** `{name}__{execution_id}.md`
 
 Examples:
+
 - `bindings/result__43.md` — binding `result` in execution_id 43
 - `bindings/parts__44.md` — binding `parts` in execution_id 44
 
 **File format with execution scope:**
 
-```markdown
+````markdown
 # result
 
 kind: let
 execution_id: 43
 
 source:
+
 ```prose
 let result = session "Process chunk"
 ```
+````
 
 ---
 
 Processed chunk into 3 sub-parts...
+
 ```
 
 **Scope resolution:** The VM resolves variable references by checking:
@@ -259,15 +299,17 @@ The first match wins.
 **Example directory for recursive calls:**
 
 ```
+
 bindings/
-├── data.md              # Root scope input
-├── result__1.md         # First process() invocation
-├── parts__1.md          # Parts from first invocation
-├── result__2.md         # Recursive call (depth 2)
-├── parts__2.md          # Parts from depth 2
-├── result__3.md         # Recursive call (depth 3)
+├── data.md # Root scope input
+├── result**1.md # First process() invocation
+├── parts**1.md # Parts from first invocation
+├── result**2.md # Recursive call (depth 2)
+├── parts**2.md # Parts from depth 2
+├── result\_\_3.md # Recursive call (depth 3)
 └── ...
-```
+
+````
 
 ---
 
@@ -294,7 +336,7 @@ Architecture uses Express + PostgreSQL. Test coverage target is 80%.
 
 - Rate limiting not yet implemented on login endpoint
 - Need to verify OAuth flow works with new token format
-```
+````
 
 #### `agents/{name}/{name}-NNN.md` (Segments)
 
@@ -318,11 +360,11 @@ prompt: "Review the research findings"
 
 ## Who Writes What
 
-| File | Written By |
-|------|------------|
-| `state.md` | VM only |
-| `bindings/{name}.md` | Subagent |
-| `agents/{name}/memory.md` | Persistent agent |
+| File                          | Written By       |
+| ----------------------------- | ---------------- |
+| `state.md`                    | VM only          |
+| `bindings/{name}.md`          | Subagent         |
+| `agents/{name}/memory.md`     | Persistent agent |
 | `agents/{name}/{name}-NNN.md` | Persistent agent |
 
 The VM orchestrates; subagents write their own outputs directly to the filesystem. **The VM never holds full binding values—it tracks file paths.**
@@ -335,7 +377,7 @@ When the VM spawns a session, it tells the subagent where to write output.
 
 ### For Regular Sessions
 
-```
+````
 When you complete this task, write your output to:
   .prose/runs/20260115-143052-a7b3c9/bindings/research.md
 
@@ -348,24 +390,27 @@ source:
 ```prose
 let research = session: researcher
   prompt: "Research AI safety"
-```
+````
 
 ---
 
 [Your output here]
+
 ```
 
 ### For Persistent Agents (resume:)
 
 ```
+
 Your memory is at:
-  .prose/runs/20260115-143052-a7b3c9/agents/captain/memory.md
+.prose/runs/20260115-143052-a7b3c9/agents/captain/memory.md
 
 Read it first to understand your prior context. When done, update it
 with your compacted state following the guidelines in primitives/session.md.
 
 Also write your segment record to:
-  .prose/runs/20260115-143052-a7b3c9/agents/captain/captain-003.md
+.prose/runs/20260115-143052-a7b3c9/agents/captain/captain-003.md
+
 ```
 
 ### What Subagents Return to the VM
@@ -374,17 +419,21 @@ After writing output, the subagent returns a **confirmation message**—not the 
 
 **Root scope (outside block invocations):**
 ```
+
 Binding written: research
 Location: .prose/runs/20260115-143052-a7b3c9/bindings/research.md
 Summary: AI safety research covering alignment, robustness, and interpretability with 15 citations.
+
 ```
 
 **Inside block invocation (include execution_id):**
 ```
+
 Binding written: result
-Location: .prose/runs/20260115-143052-a7b3c9/bindings/result__43.md
+Location: .prose/runs/20260115-143052-a7b3c9/bindings/result\_\_43.md
 Execution ID: 43
 Summary: Processed chunk into 3 sub-parts for recursive processing.
+
 ```
 
 The VM records the location and continues. It does NOT read the file—it passes the reference to subsequent sessions that need the context.
@@ -396,16 +445,18 @@ The VM records the location and continues. It does NOT read the file—it passes
 Imported programs use the **same unified structure recursively**:
 
 ```
+
 .prose/runs/{id}/imports/{handle}--{slug}/
 ├── program.prose
 ├── state.md
 ├── bindings/
-│   └── {name}.md
-├── imports/                    # Nested imports go here
-│   └── {handle2}--{slug2}/
-│       └── ...
+│ └── {name}.md
+├── imports/ # Nested imports go here
+│ └── {handle2}--{slug2}/
+│ └── ...
 └── agents/
-    └── {name}/
+└── {name}/
+
 ```
 
 This allows unlimited nesting depth while maintaining consistent structure at every level.
@@ -428,10 +479,10 @@ This allows unlimited nesting depth while maintaining consistent structure at ev
 After each statement completes, the VM:
 
 1. **Confirms** subagent wrote its output file(s)
-2. **Appends** a single-line marker to `state.md`
+2. **Updates** `state.md` with new position and annotations
 3. **Continues** to next statement
 
-The VM appends one line per event—it never rewrites the full state file. This keeps token generation minimal during execution.
+The VM never does compaction—that's the subagent's responsibility.
 
 ---
 
@@ -439,8 +490,9 @@ The VM appends one line per event—it never rewrites the full state file. This 
 
 If execution is interrupted, resume by:
 
-1. Reading `.prose/runs/{id}/state.md` — find the last completed marker
-2. Scanning `bindings/` directory to confirm existing outputs
-3. Continuing from the next statement
+1. Reading `.prose/runs/{id}/state.md` to find current position
+2. Loading all bindings from `bindings/`
+3. Continuing from the marked position
 
-The append-only log format makes resumption simple: the last line indicates where execution stopped.
+The `state.md` file contains everything needed to understand where execution stopped and what has been accomplished.
+```

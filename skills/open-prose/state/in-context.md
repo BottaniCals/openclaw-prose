@@ -28,13 +28,13 @@ In-context state uses text-prefixed markers to persist state within the conversa
 
 In-context state is appropriate for:
 
-| Factor | In-Context | Use File-Based Instead |
-|--------|------------|------------------------|
-| Statement count | < 30 statements | >= 30 statements |
-| Parallel branches | < 5 concurrent | >= 5 concurrent |
-| Imported programs | 0-2 imports | >= 3 imports |
-| Nested depth | <= 2 levels | > 2 levels |
-| Expected duration | < 5 minutes | >= 5 minutes |
+| Factor            | In-Context      | Use File-Based Instead |
+| ----------------- | --------------- | ---------------------- |
+| Statement count   | < 30 statements | >= 30 statements       |
+| Parallel branches | < 5 concurrent  | >= 5 concurrent        |
+| Imported programs | 0-2 imports     | >= 3 imports           |
+| Nested depth      | <= 2 levels     | > 2 levels             |
+| Expected duration | < 5 minutes     | >= 5 minutes           |
 
 Announce your state mode at program start:
 
@@ -47,25 +47,25 @@ OpenProse Program Start
 
 ## The Narration Protocol
 
-Use **compact markers** to track state with minimal token overhead. The VM's conversation history is the primary state—markers exist for clarity and potential resumption, not as verbose logs.
+Use text-prefixed markers for each state change:
 
-### Core Markers
-
-| Marker | Meaning | Example |
-|--------|---------|---------|
-| `N→ name ✓` | Statement N complete, bound to name | `1→ research ✓` |
-| `N→ ✓` | Anonymous session complete | `3→ ✓` |
-| `N→ ✗ error` | Statement failed | `2→ ✗ timeout` |
-| `∥ [a b c]` | Parallel started | `∥ [security perf style]` |
-| `∥ [a✓ b✓ c→]` | Parallel progress | `∥ [security✓ perf✓ style→]` |
-| `∥ done` | Parallel joined | `∥ done` |
-| `loop:I/M` | Loop iteration | `loop:2/5` |
-| `loop exit` | Loop condition satisfied | `loop:3/5 exit` |
-| `#ID name` | Block invocation | `#43 process` |
-| `#ID done` | Block complete | `#43 done` |
-| `try→` | Entering try | `try→` |
-| `catch→` | Entering catch | `catch→ err` |
-| `finally→` | Entering finally | `finally→` |
+| Marker     | Category       | Usage                                   |
+| ---------- | -------------- | --------------------------------------- |
+| [Program]  | Program        | Start, end, definition collection       |
+| [Position] | Position       | Current statement being executed        |
+| [Binding]  | Binding        | Variable assignment or update           |
+| [Input]    | Input          | Receiving inputs from caller            |
+| [Output]   | Output         | Producing outputs for caller            |
+| [Import]   | Import         | Fetching and invoking imported programs |
+| [Success]  | Success        | Session or block completion             |
+| [Warning]  | Error          | Failures and exceptions                 |
+| [Parallel] | Parallel       | Entering, branch status, joining        |
+| [Loop]     | Loop           | Iteration, condition evaluation         |
+| [Pipeline] | Pipeline       | Stage progress                          |
+| [Try]      | Error handling | Try/catch/finally                       |
+| [Flow]     | Flow           | Condition evaluation results            |
+| [Frame+]   | Call Stack     | Push new frame (block invocation)       |
+| [Frame-]   | Call Stack     | Pop frame (block completion)            |
 
 ---
 
@@ -74,85 +74,188 @@ Use **compact markers** to track state with minimal token overhead. The VM's con
 ### Session Statements
 
 ```
-1→ research ✓
+[Position] Executing: session "Research the topic"
+   [Task tool call]
+[Success] Session complete: "Research found that..."
+[Binding] let research = <result>
 ```
-
-That's it. One line. The Task tool call and result are in the conversation—no need to narrate them again.
 
 ### Parallel Blocks
 
 ```
-∥ [a b c]
-  [Task calls for a, b, c]
-∥ [a✓ b✓ c✓] done
+[Parallel] Entering parallel block (3 branches, strategy: all)
+   - security: pending
+   - perf: pending
+   - style: pending
+   [Multiple Task calls]
+[Parallel] Parallel complete:
+   - security = "No vulnerabilities found..."
+   - perf = "Performance is acceptable..."
+   - style = "Code follows conventions..."
+[Binding] security, perf, style bound
 ```
 
 ### Loop Blocks
 
 ```
-loop:1/5
-  3→ synthesis ✓
-loop:2/5
-  3→ synthesis ✓
-loop:3/5 exit(**complete**)
+[Loop] Starting loop until **task complete** (max: 5)
+
+[Loop] Iteration 1 of max 5
+   [Position] session "Work on task"
+   [Success] Session complete
+   [Loop] Evaluating: **task complete**
+   [Flow] Not satisfied, continuing
+
+[Loop] Iteration 2 of max 5
+   [Position] session "Work on task"
+   [Success] Session complete
+   [Loop] Evaluating: **task complete**
+   [Flow] Satisfied!
+
+[Loop] Loop exited: condition satisfied at iteration 2
 ```
 
 ### Error Handling
 
 ```
-try→
-  2→ ✗ timeout
-catch→ err
-  3→ recovery ✓
-finally→
-  4→ cleanup ✓
+[Try] Entering try block
+[Position] session "Risky operation"
+[Warning] Session failed: connection timeout
+[Binding] err = {message: "connection timeout"}
+[Try] Executing catch block
+[Position] session "Handle error" with context: err
+[Success] Recovery complete
+[Try] Executing finally block
+[Position] session "Cleanup"
+[Success] Cleanup complete
 ```
 
-### Block Invocation
+### Variable Bindings
 
 ```
-#1 process(data,5)
-  5→ parts ✓
-  #2 process(parts[0],4)
-    6→ subparts ✓
-  #2 done
-  7→ combined ✓
-#1 done
+[Binding] let research = "AI safety research covers..." (mutable)
+[Binding] const config = {model: "opus"} (immutable)
+[Binding] research = "Updated research..." (reassignment, was: "AI safety...")
 ```
 
-Block invocations nest visually. The `#ID` uniquely identifies each invocation for scoped bindings.
-
-### Scoped Bindings
-
-When inside a block, bindings are implicitly scoped to the current `#ID`:
+### Input/Output Bindings
 
 ```
-#43 process
-  5→ result ✓   (scoped to #43)
+[Input] Inputs received:
+   topic = "quantum computing" (from caller)
+   depth = "deep" (from caller)
+
+[Output] output findings = "Research shows..." (will return to caller)
+[Output] output sources = ["arxiv:2401.1234", ...] (will return to caller)
+```
+
+### Block Invocation and Call Stack
+
+Track block invocations with frame markers:
+
+```
+[Position] do process(data, 5)
+[Frame+] Entering block: process (execution_id: 1, depth: 1)
+   Arguments: chunk=data, depth=5
+
+   [Position] session "Split into parts"
+      [Task tool call]
+   [Success] Session complete
+   [Binding] let parts = <result> (execution_id: 1)
+
+   [Position] do process(parts[0], 4)
+   [Frame+] Entering block: process (execution_id: 2, depth: 2)
+      Arguments: chunk=parts[0], depth=4
+      Parent: execution_id 1
+
+      [Position] session "Split into parts"
+         [Task tool call]
+      [Success] Session complete
+      [Binding] let parts = <result> (execution_id: 2)  # Shadows parent's 'parts'
+
+      ... (continues recursively)
+
+   [Frame-] Exiting block: process (execution_id: 2)
+
+   [Position] session "Combine results"
+      [Task tool call]
+   [Success] Session complete
+
+[Frame-] Exiting block: process (execution_id: 1)
+```
+
+**Key points:**
+
+- Each `[Frame+]` must have a matching `[Frame-]`
+- `execution_id` uniquely identifies each invocation
+- `depth` shows call stack depth (1 = first level)
+- Bindings include `(execution_id: N)` to indicate scope
+- Nested frames show `Parent: execution_id N` for the scope chain
+
+### Scoped Binding Narration
+
+When inside a block invocation, always include the execution_id:
+
+```
+[Binding] let result = "computed value" (execution_id: 43)
+```
+
+For variable resolution across scopes:
+
+```
+[Binding] Resolving 'config': found in execution_id 41 (parent scope)
 ```
 
 ### Program Imports
 
 ```
-use alice/research → research
-research(topic:"quantum") → result ✓
+[Import] Importing: @alice/research
+   Remote dependency requires approval: https://p.prose.md/@alice/research
+   Operator approved: approve remote prose imports
+   Fetching from: https://p.prose.md/@alice/research
+   Inputs expected: [topic, depth]
+   Outputs provided: [findings, sources]
+   Registered as: research
+
+[Import] Invoking: research(topic: "quantum computing")
+   [Input] Passing inputs:
+      topic = "quantum computing"
+
+   [... imported program execution ...]
+
+   [Output] Received outputs:
+      findings = "Quantum computing uses..."
+      sources = ["arxiv:2401.1234"]
+
+[Import] Import complete: research
+[Binding] result = { findings: "...", sources: [...] }
 ```
 
 ---
 
 ## Context Serialization
 
-**In-context state passes values, not references.** The VM holds binding values directly in conversation history.
+**In-context state passes values, not references.** This is the key difference from file-based and PostgreSQL state. The VM holds binding values directly in conversation history.
 
 When passing context to sessions, format appropriately:
 
-| Context Size | Strategy |
-|--------------|----------|
-| < 2000 chars | Pass verbatim |
+| Context Size    | Strategy                |
+| --------------- | ----------------------- |
+| < 2000 chars    | Pass verbatim           |
 | 2000-8000 chars | Summarize to key points |
-| > 8000 chars | Extract essentials only |
+| > 8000 chars    | Extract essentials only |
 
-**Limitation:** In-context state cannot support RLM-style patterns with arbitrarily large bindings. For large intermediate values, use file-based or PostgreSQL state.
+**Format:**
+
+```
+Context provided:
+---
+research: "Key findings about AI safety..."
+analysis: "Risk assessment shows..."
+---
+```
+
+**Limitation:** In-context state cannot support RLM-style "environment as variable" patterns where agents query arbitrarily large bindings. For programs with large intermediate values, use file-based or PostgreSQL state instead.
 
 ---
 
@@ -174,35 +277,88 @@ loop until **analysis complete** (max: 3):
     context: { a, b, research }
 ```
 
-**Compact narration:**
-```
-1→ research ✓
-∥ [a b]
-∥ [a✓ b✓] done
-loop:1/3
-  3→ synthesis ✓
-loop:2/3 exit(**complete**)
----end
-```
+**Narration:**
 
-That's the entire execution trace in 7 lines instead of 40+. The Task tool calls and their results are in the conversation history—the markers just track position and completion.
+```
+[Program] Program Start
+   Collecting definitions...
+   - Agent: researcher (model: sonnet)
+
+[Position] Statement 1: let research = session: researcher
+   Spawning with prompt: "Research AI safety"
+   Model: sonnet
+   [Task tool call]
+[Success] Session complete: "AI safety research covers alignment..."
+[Binding] let research = <result>
+
+[Position] Statement 2: parallel block
+[Parallel] Entering parallel (2 branches, strategy: all)
+   [Task: "Analyze risk A"] [Task: "Analyze risk B"]
+[Parallel] Parallel complete:
+   - a = "Risk A: potential misalignment..."
+   - b = "Risk B: robustness concerns..."
+[Binding] a, b bound
+
+[Position] Statement 3: loop until **analysis complete** (max: 3)
+[Loop] Starting loop
+
+[Loop] Iteration 1 of max 3
+   [Position] session "Synthesize" with context: {a, b, research}
+   [Task with serialized context]
+   [Success] Result: "Initial synthesis shows..."
+   [Loop] Evaluating: **analysis complete**
+   [Flow] Not satisfied (synthesis is preliminary)
+
+[Loop] Iteration 2 of max 3
+   [Position] session "Synthesize" with context: {a, b, research}
+   [Task with serialized context]
+   [Success] Result: "Comprehensive analysis complete..."
+   [Loop] Evaluating: **analysis complete**
+   [Flow] Satisfied!
+
+[Loop] Loop exited: condition satisfied at iteration 2
+
+[Program] Program Complete
+```
 
 ---
 
-## What the VM Tracks Implicitly
+## State Categories
 
-The VM's conversation naturally contains:
+The VM must track these state categories in narration:
 
-| Information | Where It Lives |
-|-------------|----------------|
-| Agent/block definitions | Read at program start, in early context |
-| Binding values | Task tool results in conversation |
-| Current position | VM knows what it just executed |
-| Loop iteration | VM is counting |
-| Parallel status | VM spawned the tasks, sees returns |
-| Call stack | VM invoked the blocks |
+| Category                | What to Track                             | Example                                      |
+| ----------------------- | ----------------------------------------- | -------------------------------------------- |
+| **Import Registry**     | Imported programs and aliases             | `research: @alice/research`                  |
+| **Agent Registry**      | All agent definitions                     | `researcher: {model: sonnet, prompt: "..."}` |
+| **Block Registry**      | All block definitions (hoisted)           | `review: {params: [topic], body: [...]}`     |
+| **Input Bindings**      | Inputs received from caller               | `topic = "quantum computing"`                |
+| **Output Bindings**     | Outputs to return to caller               | `findings = "Research shows..."`             |
+| **Variable Bindings**   | Name -> value mapping (with execution_id) | `result = "..." (execution_id: 3)`           |
+| **Variable Mutability** | Which are `let` vs `const` vs `output`    | `research: let, findings: output`            |
+| **Execution Position**  | Current statement index                   | Statement 3 of 7                             |
+| **Loop State**          | Counter, max, condition                   | Iteration 2 of max 5                         |
+| **Parallel State**      | Branches, results, strategy               | `{a: complete, b: pending}`                  |
+| **Error State**         | Exception, retry count                    | Retry 2 of 3, error: "timeout"               |
+| **Call Stack**          | Stack of execution frames                 | See below                                    |
 
-The compact markers exist for **clarity and resumption**, not as the primary state store. The conversation IS the state.
+### Call Stack State
+
+For block invocations, track the full call stack:
+
+```
+[CallStack] Current stack (depth: 3):
+   execution_id: 5 | block: process | depth: 3 | status: executing
+   execution_id: 3 | block: process | depth: 2 | status: waiting
+   execution_id: 1 | block: process | depth: 1 | status: waiting
+```
+
+Each frame tracks:
+
+- `execution_id`: Unique ID for this invocation
+- `block`: Name of the block
+- `depth`: Position in call stack
+- `status`: executing, waiting, or completed
 
 ---
 
@@ -221,10 +377,10 @@ They are not designed to be complementary—pick the appropriate mode at program
 
 In-context state management:
 
-1. Uses **compact markers** (`1→ research ✓`) instead of verbose narration
-2. Relies on **conversation history** as the primary state
-3. Is appropriate for **smaller, simpler programs** (<30 statements)
-4. Generates **minimal tokens** per statement
-5. Enables resumption by reading prior markers
+1. Uses **text-prefixed markers** to track state changes
+2. Persists state in **conversation history**
+3. Is appropriate for **smaller, simpler programs**
+4. Requires **consistent narration** throughout execution
+5. Makes state **visible** in the conversation itself
 
-The conversation IS the state. Markers provide structure and resumability without token bloat.
+The narration protocol ensures that the VM can recover its execution state by reading its own prior messages. What you say becomes what you remember.

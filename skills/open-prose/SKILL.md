@@ -1,12 +1,18 @@
 ---
-name: open-prose
-description: |
-  OpenProse is a programming language for AI sessions. Activate on ANY `prose` command (prose boot, prose run, prose compile, prose update, etc.), running .prose files, mentioning OpenProse/Prose, or orchestrating multi-agent workflows. The skill intelligently interprets what the user wants.
+name: prose
+description: OpenProse is a programming language for AI sessions. Activate on ANY `prose` command (prose boot, prose run, prose compile, prose update, etc.), running .prose files, mentioning OpenProse/Prose, or orchestrating multi-agent workflows. The skill intelligently interprets what the user wants.
 ---
 
 # OpenProse Skill
 
 OpenProse is a programming language for AI sessions. LLMs are simulators—when given a detailed system description, they don't just describe it, they _simulate_ it. The `prose.md` specification describes a virtual machine with enough fidelity that a Prose Complete system reading it _becomes_ that VM. Simulation with sufficient fidelity is implementation. **You are the Prose Complete system.**
+
+## OpenClaw Runtime Mapping
+
+- **Task tool** in the upstream spec == OpenClaw `sessions_spawn`
+- **File I/O** == OpenClaw `read`/`write`
+- **Shell execution** == OpenClaw `exec`
+- **Remote fetch** == OpenClaw `web_fetch` (or `exec` with curl when POST is required)
 
 ## When to Activate
 
@@ -23,19 +29,19 @@ Activate this skill when the user:
 
 When a user invokes `prose <command>`, intelligently route based on intent:
 
-| Command | Action |
-|---------|--------|
-| `prose help` | Load `help.md`, guide user to what they need |
-| `prose run <file>` | Load VM (`prose.md` + state backend), execute the program |
+| Command                 | Action                                                        |
+| ----------------------- | ------------------------------------------------------------- |
+| `prose help`            | Load `help.md`, guide user to what they need                  |
+| `prose run <file>`      | Load VM (`prose.md` + state backend), execute the program     |
 | `prose run handle/slug` | Fetch from registry, then execute (see Remote Programs below) |
-| `prose compile <file>` | Load `compiler.md`, validate the program |
-| `prose update` | Run migration (see Migration section below) |
-| `prose examples` | Show or run example programs from `examples/` |
-| Other | Intelligently interpret based on context |
+| `prose compile <file>`  | Load `compiler.md`, validate the program                      |
+| `prose update`          | Run migration (see Migration section below)                   |
+| `prose examples`        | Show or run example programs from `examples/`                 |
+| Other                   | Intelligently interpret based on context                      |
 
 ### Important: Single Skill
 
-There is only ONE skill: `open-prose`. There are NO separate skills like `prose-run`, `prose-compile`, or `prose-boot`. All `prose` commands route through this single skill.
+There is only ONE skill: `prose`. There are NO separate skills like `prose-run`, `prose-compile`, or `prose-boot`. All `prose` commands route through this single skill.
 
 ### Resolving Example References
 
@@ -71,11 +77,11 @@ prose run alice/code-review
 
 **Resolution rules:**
 
-| Input | Resolution |
-|-------|------------|
-| Starts with `http://` or `https://` | Fetch directly from URL |
-| Contains `/` but no protocol | Resolve to `https://p.prose.md/{path}` |
-| Otherwise | Treat as local file path |
+| Input                               | Resolution                             |
+| ----------------------------------- | -------------------------------------- |
+| Starts with `http://` or `https://` | Fetch directly from URL                |
+| Contains `/` but no protocol        | Resolve to `https://p.prose.md/{path}` |
+| Otherwise                           | Treat as local file path               |
 
 **Steps for remote programs:**
 
@@ -83,12 +89,26 @@ prose run alice/code-review
 2. Fetch the `.prose` content
 3. Load the VM and execute as normal
 
-This same resolution applies to `use` statements inside `.prose` files:
+Top-level remote runs are explicit user requests. Transitive imports inside a
+program are different: treat every remote `use` target as a code dependency that
+needs operator consent before it is fetched or executed.
+
+This same resolution applies to `use` statements inside `.prose` files, but the
+VM must fail closed until the operator approves the remote dependency list:
 
 ```prose
 use "https://example.com/my-program.prose"  # Direct URL
 use "alice/research" as research             # Registry shorthand
 ```
+
+When a program contains any remote `use` target (`http://`, `https://`, or
+registry shorthand):
+
+1. Collect and display the exact resolved remote targets.
+2. Explain that these are transitive code dependencies for this run.
+3. Ask the operator to reply exactly `approve remote prose imports` to continue.
+4. Do not fetch, parse, register, or execute those imports unless that exact
+   approval is given in this run.
 
 ---
 
@@ -96,33 +116,33 @@ use "alice/research" as research             # Registry shorthand
 
 **Do NOT search for OpenProse documentation files.** All skill files are co-located with this SKILL.md file:
 
-| File                      | Location                    | Purpose                                   |
-| ------------------------- | --------------------------- | ----------------------------------------- |
-| `prose.md`                | Same directory as this file | VM semantics (load to run programs)       |
-| `help.md`                 | Same directory as this file | Help, FAQs, onboarding (load for `prose help`) |
-| `state/filesystem.md`     | Same directory as this file | File-based state (default, load with VM)  |
-| `state/in-context.md`     | Same directory as this file | In-context state (on request)             |
-| `state/sqlite.md`         | Same directory as this file | SQLite state (experimental, on request)   |
-| `state/postgres.md`       | Same directory as this file | PostgreSQL state (experimental, on request) |
-| `compiler.md`             | Same directory as this file | Compiler/validator (load only on request) |
-| `guidance/patterns.md`    | Same directory as this file | Best practices (load when writing .prose) |
-| `guidance/antipatterns.md`| Same directory as this file | What to avoid (load when writing .prose)  |
-| `examples/`               | Same directory as this file | 37 example programs                       |
+| File                       | Location                    | Purpose                                        |
+| -------------------------- | --------------------------- | ---------------------------------------------- |
+| `prose.md`                 | Same directory as this file | VM semantics (load to run programs)            |
+| `help.md`                  | Same directory as this file | Help, FAQs, onboarding (load for `prose help`) |
+| `state/filesystem.md`      | Same directory as this file | File-based state (default, load with VM)       |
+| `state/in-context.md`      | Same directory as this file | In-context state (on request)                  |
+| `state/sqlite.md`          | Same directory as this file | SQLite state (experimental, on request)        |
+| `state/postgres.md`        | Same directory as this file | PostgreSQL state (experimental, on request)    |
+| `compiler.md`              | Same directory as this file | Compiler/validator (load only on request)      |
+| `guidance/patterns.md`     | Same directory as this file | Best practices (load when writing .prose)      |
+| `guidance/antipatterns.md` | Same directory as this file | What to avoid (load when writing .prose)       |
+| `examples/`                | Same directory as this file | 37 example programs                            |
 
 **User workspace files** (these ARE in the user's project):
 
-| File/Directory   | Location                 | Purpose                             |
-| ---------------- | ------------------------ | ----------------------------------- |
-| `.prose/.env`    | User's working directory | Config (key=value format) |
-| `.prose/runs/`   | User's working directory | Runtime state for file-based mode   |
-| `.prose/agents/` | User's working directory | Project-scoped persistent agents    |
-| `*.prose` files  | User's project           | User-created programs to execute    |
+| File/Directory   | Location                 | Purpose                           |
+| ---------------- | ------------------------ | --------------------------------- |
+| `.prose/.env`    | User's working directory | Config (key=value format)         |
+| `.prose/runs/`   | User's working directory | Runtime state for file-based mode |
+| `.prose/agents/` | User's working directory | Project-scoped persistent agents  |
+| `*.prose` files  | User's project           | User-created programs to execute  |
 
 **User-level files** (in user's home directory, shared across all projects):
 
-| File/Directory    | Location         | Purpose                                  |
-| ----------------- | ---------------- | ---------------------------------------- |
-| `~/.prose/agents/`| User's home dir  | User-scoped persistent agents (cross-project) |
+| File/Directory     | Location        | Purpose                                       |
+| ------------------ | --------------- | --------------------------------------------- |
+| `~/.prose/agents/` | User's home dir | User-scoped persistent agents (cross-project) |
 
 When you need to read `prose.md` or `compiler.md`, read them from the same directory where you found this SKILL.md file. Never search the user's workspace for these files.
 
@@ -130,20 +150,21 @@ When you need to read `prose.md` or `compiler.md`, read them from the same direc
 
 ## Core Documentation
 
-| File                  | Purpose              | When to Load                                   |
-| --------------------- | -------------------- | ---------------------------------------------- |
-| `prose.md`            | VM / Interpreter     | Always load to run programs                    |
-| `state/filesystem.md` | File-based state     | Load with VM (default)                         |
-| `state/in-context.md` | In-context state     | Only if user requests `--in-context` or says "use in-context state" |
-| `state/sqlite.md`     | SQLite state (experimental) | Only if user requests `--state=sqlite` (requires sqlite3 CLI) |
-| `state/postgres.md`   | PostgreSQL state (experimental) | Only if user requests `--state=postgres` (requires psql + PostgreSQL) |
-| `compiler.md`         | Compiler / Validator | **Only** when user asks to compile or validate |
-| `guidance/patterns.md` | Best practices      | Load when **writing** new .prose files         |
-| `guidance/antipatterns.md` | What to avoid  | Load when **writing** new .prose files         |
+| File                       | Purpose                         | When to Load                                                          |
+| -------------------------- | ------------------------------- | --------------------------------------------------------------------- |
+| `prose.md`                 | VM / Interpreter                | Always load to run programs                                           |
+| `state/filesystem.md`      | File-based state                | Load with VM (default)                                                |
+| `state/in-context.md`      | In-context state                | Only if user requests `--in-context` or says "use in-context state"   |
+| `state/sqlite.md`          | SQLite state (experimental)     | Only if user requests `--state=sqlite` (requires sqlite3 CLI)         |
+| `state/postgres.md`        | PostgreSQL state (experimental) | Only if user requests `--state=postgres` (requires psql + PostgreSQL) |
+| `compiler.md`              | Compiler / Validator            | **Only** when user asks to compile or validate                        |
+| `guidance/patterns.md`     | Best practices                  | Load when **writing** new .prose files                                |
+| `guidance/antipatterns.md` | What to avoid                   | Load when **writing** new .prose files                                |
 
 ### Authoring Guidance
 
 When the user asks you to **write or create** a new `.prose` file, load the guidance files:
+
 - `guidance/patterns.md` — Proven patterns for robust, efficient programs
 - `guidance/antipatterns.md` — Common mistakes to avoid
 
@@ -153,12 +174,12 @@ Do **not** load these when running or compiling—they're for authoring only.
 
 OpenProse supports three state management approaches:
 
-| Mode | When to Use | State Location |
-|------|-------------|----------------|
-| **filesystem** (default) | Complex programs, resumption needed, debugging | `.prose/runs/{id}/` files |
-| **in-context** | Simple programs (<30 statements), no persistence needed | Conversation history |
-| **sqlite** (experimental) | Queryable state, atomic transactions, flexible schema | `.prose/runs/{id}/state.db` |
-| **postgres** (experimental) | True concurrent writes, external integrations, team collaboration | PostgreSQL database |
+| Mode                        | When to Use                                                       | State Location              |
+| --------------------------- | ----------------------------------------------------------------- | --------------------------- |
+| **filesystem** (default)    | Complex programs, resumption needed, debugging                    | `.prose/runs/{id}/` files   |
+| **in-context**              | Simple programs (<30 statements), no persistence needed           | Conversation history        |
+| **sqlite** (experimental)   | Queryable state, atomic transactions, flexible schema             | `.prose/runs/{id}/state.db` |
+| **postgres** (experimental) | True concurrent writes, external integrations, team collaboration | PostgreSQL database         |
 
 **Default behavior:** When loading `prose.md`, also load `state/filesystem.md`. This is the recommended mode for most programs.
 
@@ -171,6 +192,7 @@ OpenProse supports three state management approaches:
 **⚠️ Security Note:** Database credentials in `OPENPROSE_POSTGRES_URL` are passed to subagent sessions and visible in logs. Advise users to use a dedicated database with limited-privilege credentials. See `state/postgres.md` for secure setup guidance.
 
 1. **Check for connection configuration first:**
+
    ```bash
    # Check .prose/.env for OPENPROSE_POSTGRES_URL
    cat .prose/.env 2>/dev/null | grep OPENPROSE_POSTGRES_URL
@@ -179,11 +201,13 @@ OpenProse supports three state management approaches:
    ```
 
 2. **If connection string exists, verify connectivity:**
+
    ```bash
    psql "$OPENPROSE_POSTGRES_URL" -c "SELECT 1" 2>&1
    ```
 
 3. **If not configured or connection fails, advise the user:**
+
    ```
    ⚠️  PostgreSQL state requires a connection URL.
 
@@ -226,15 +250,6 @@ Start with `01-hello-world.prose` or try `37-the-forge.prose` to watch AI build 
 
 ## Execution
 
-When first invoking the OpenProse VM in a session, display this banner:
-
-```
-┌─────────────────────────────────────┐
-│         ◇ OpenProse VM ◇            │
-│       A new kind of computer        │
-└─────────────────────────────────────┘
-```
-
 To execute a `.prose` file, you become the OpenProse VM:
 
 1. **Read `prose.md`** — this document defines how you embody the VM
@@ -255,31 +270,47 @@ When a user invokes `prose update`, check for legacy file structures and migrate
 
 ### Legacy Paths to Check
 
-| Legacy Path | Current Path | Notes |
-|-------------|--------------|-------|
-| `.prose/execution/` | `.prose/runs/` | Rename directory |
+| Legacy Path         | Current Path   | Notes                            |
+| ------------------- | -------------- | -------------------------------- |
+| `.prose/state.json` | `.prose/.env`  | Convert JSON to key=value format |
+| `.prose/execution/` | `.prose/runs/` | Rename directory                 |
 
 ### Migration Steps
 
-1. **Check for `.prose/execution/`**
+1. **Check for `.prose/state.json`**
+   - If exists, read the JSON content
+   - Convert to `.env` format:
+     ```json
+     {"OPENPROSE_TELEMETRY": "enabled", "USER_ID": "user-xxx", "SESSION_ID": "sess-xxx"}
+     ```
+     becomes:
+     ```env
+     OPENPROSE_TELEMETRY=enabled
+     USER_ID=user-xxx
+     SESSION_ID=sess-xxx
+     ```
+   - Write to `.prose/.env`
+   - Delete `.prose/state.json`
+
+2. **Check for `.prose/execution/`**
    - If exists, rename to `.prose/runs/`
    - The internal structure of run directories may also have changed; migration of individual run state is best-effort
 
-2. **Create `.prose/agents/` if missing**
+3. **Create `.prose/agents/` if missing**
    - This is a new directory for project-scoped persistent agents
-
-3. **Delete legacy `.prose/state.json`** if present (no longer used)
 
 ### Migration Output
 
 ```
 🔄 Migrating OpenProse workspace...
+  ✓ Converted .prose/state.json → .prose/.env
   ✓ Renamed .prose/execution/ → .prose/runs/
   ✓ Created .prose/agents/
 ✅ Migration complete. Your workspace is up to date.
 ```
 
 If no legacy files are found:
+
 ```
 ✅ Workspace already up to date. No migration needed.
 ```
@@ -288,10 +319,10 @@ If no legacy files are found:
 
 These documentation files were renamed in the skill itself (not user workspace):
 
-| Legacy Name | Current Name |
-|-------------|--------------|
-| `docs.md` | `compiler.md` |
-| `patterns.md` | `guidance/patterns.md` |
+| Legacy Name       | Current Name               |
+| ----------------- | -------------------------- |
+| `docs.md`         | `compiler.md`              |
+| `patterns.md`     | `guidance/patterns.md`     |
 | `antipatterns.md` | `guidance/antipatterns.md` |
 
 If you encounter references to the old names in user prompts or external docs, map them to the current paths.

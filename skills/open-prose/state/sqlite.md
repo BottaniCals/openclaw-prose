@@ -21,11 +21,11 @@ This document describes how the OpenProse VM tracks execution state using a **SQ
 
 **Requires:** The `sqlite3` command-line tool must be available in your PATH.
 
-| Platform | Installation |
-|----------|--------------|
-| macOS | Pre-installed |
-| Linux | `apt install sqlite3` / `dnf install sqlite3` / etc. |
-| Windows | `winget install SQLite.SQLite` or download from sqlite.org |
+| Platform | Installation                                               |
+| -------- | ---------------------------------------------------------- |
+| macOS    | Pre-installed                                              |
+| Linux    | `apt install sqlite3` / `dnf install sqlite3` / etc.       |
+| Windows  | `winget install SQLite.SQLite` or download from sqlite.org |
 
 If `sqlite3` is not available, the VM will fall back to filesystem state and warn the user.
 
@@ -87,68 +87,28 @@ The `agents` and `agent_segments` tables for project-scoped agents live in `.pro
 
 ## Responsibility Separation
 
-This section defines **who does what**. This is the contract between the VM and subagents.
+The VM/subagent contract matches [postgres.md](./postgres.md#responsibility-separation).
 
-### VM Responsibilities
+SQLite-specific differences:
 
-The VM (the orchestrating agent running the .prose program) is responsible for:
+- the VM creates `state.db` instead of an `openprose` schema
+- subagent confirmation messages point at a local database path, for example `.prose/runs/<runId>/state.db`
+- cleanup is typically `VACUUM` or file deletion rather than dropping schema objects
 
-| Responsibility | Description |
-|----------------|-------------|
-| **Database creation** | Create `state.db` and initialize core tables at run start |
-| **Program registration** | Store the program source and metadata |
-| **Execution tracking** | Append completion records (not update-per-statement) |
-| **Subagent spawning** | Spawn sessions via Task tool with database path and instructions |
-| **Parallel coordination** | Track branch status, implement join strategies |
-| **Loop management** | Track iteration counts, evaluate conditions |
-| **Error aggregation** | Record failures, manage retry state |
-| **Completion detection** | Mark the run as complete when finished |
+Example return values:
 
-**Critical:** The VM's conversation history is the primary execution state. The database exists for persistence and coordination, not as the source of truth during normal execution. The VM appends records on completion events—it does NOT update the database after every statement.
-
-### Subagent Responsibilities
-
-Subagents (sessions spawned by the VM) are responsible for:
-
-| Responsibility | Description |
-|----------------|-------------|
-| **Writing own outputs** | Insert/update their binding in the `bindings` table |
-| **Memory management** | For persistent agents: read and update their memory record |
-| **Segment recording** | For persistent agents: append segment history |
-| **Attachment handling** | Write large outputs to `attachments/` directory, store path in DB |
-| **Atomic writes** | Use transactions when updating multiple related records |
-
-**Critical:** Subagents write ONLY to `bindings`, `agents`, and `agent_segments` tables. The VM owns the `execution` table entirely. Completion signaling happens through the substrate (Task tool return), not database updates.
-
-**Critical:** Subagents must write their outputs directly to the database. The VM does not write subagent outputs—it only reads them after the subagent completes.
-
-**What subagents return to the VM:** A confirmation message with the binding location—not the full content:
-
-**Root scope:**
-```
+```text
 Binding written: research
 Location: .prose/runs/20260116-143052-a7b3c9/state.db (bindings table, name='research', execution_id=NULL)
-Summary: AI safety research covering alignment, robustness, and interpretability with 15 citations.
 ```
 
-**Inside block invocation:**
-```
+```text
 Binding written: result
 Location: .prose/runs/20260116-143052-a7b3c9/state.db (bindings table, name='result', execution_id=43)
 Execution ID: 43
-Summary: Processed chunk into 3 sub-parts for recursive processing.
 ```
 
-The VM tracks locations, not values. This keeps the VM's context lean and enables arbitrarily large intermediate values.
-
-### Shared Concerns
-
-| Concern | Who Handles |
-|---------|-------------|
-| Schema evolution | Either (use `CREATE TABLE IF NOT EXISTS`, `ALTER TABLE` as needed) |
-| Custom tables | Either (prefix with `x_` for extensions) |
-| Indexing | Either (add indexes for frequently-queried columns) |
-| Cleanup | VM (at run end, optionally vacuum) |
+The VM still tracks locations, not full values.
 
 ---
 
@@ -373,95 +333,92 @@ For project-scoped agents, use `.prose/agents.db`. For user-scoped agents, use `
 
 ## Context Preservation in Main Thread
 
-The VM's conversation history is the primary execution state. The database exists for persistence and debugging.
+**This is critical.** The database is for persistence and coordination, but the VM must still maintain conversational context.
 
-### Compact Narration
+### What the VM Must Narrate
 
-Use minimal markers in conversation (same as filesystem/in-context state):
+Even with SQLite state, the VM should narrate key events in its conversation:
 
 ```
-1→ research ✓
-∥ [a b c] done
-loop:2/5 exit
+[Position] Statement 3: let research = session: researcher
+   Spawning session, will write to state.db
+   [Task tool call]
+[Success] Session complete, binding written to DB
+[Binding] research = <stored in state.db>
 ```
 
-The Task tool calls and results are in the conversation—no need to narrate them verbosely.
+### Why Both?
 
-### Why Both Conversation and Database?
+| Purpose                   | Mechanism                                                            |
+| ------------------------- | -------------------------------------------------------------------- |
+| **Working memory**        | Conversation narration (what the VM "remembers" without re-querying) |
+| **Durable state**         | SQLite database (survives context limits, enables resumption)        |
+| **Subagent coordination** | SQLite database (shared access point)                                |
+| **Debugging/inspection**  | SQLite database (queryable history)                                  |
 
-| Purpose | Mechanism |
-|---------|-----------|
-| **Working memory** | Conversation (what the VM "remembers" without querying) |
-| **Durable state** | Database (survives context limits, enables resumption) |
-| **Debugging/inspection** | Database (queryable history) |
-
-The conversation is primary; the database is for persistence and inspection.
+The narration is the VM's "mental model" of execution. The database is the "source of truth" for resumption and inspection.
 
 ---
 
 ## Parallel Execution
 
-For parallel blocks, **append completion records** rather than updating status. Only the VM writes to the `execution` table.
+For parallel blocks, the VM uses the `metadata` JSON field to track branches. **Only the VM writes to the `execution` table.**
 
 ```sql
--- VM appends parallel start
+-- VM marks parallel start
 INSERT INTO execution (statement_index, statement_text, status, metadata)
-VALUES (5, 'parallel:', 'started', '{"parallel_id": "p1", "branches": ["a", "b", "c"]}');
+VALUES (5, 'parallel:', 'executing', '{"parallel_id": "p1", "strategy": "all", "branches": ["a", "b", "c"]}');
 
--- Subagents write to bindings table, Task tool signals completion
--- VM appends completion record for each branch as it returns
-INSERT INTO execution (statement_index, statement_text, status, metadata)
-VALUES (5, 'parallel:a', 'completed', '{"parallel_id": "p1", "branch": "a"}');
+-- VM creates execution record for each branch
+INSERT INTO execution (statement_index, statement_text, status, parent_id, metadata)
+VALUES (6, 'a = session "Task A"', 'executing', 5, '{"parallel_id": "p1", "branch": "a"}');
 
--- When all branches complete, VM appends join record
-INSERT INTO execution (statement_index, statement_text, status, metadata)
-VALUES (5, 'parallel:', 'joined', '{"parallel_id": "p1"}');
+-- Subagent writes its output to bindings table (see "From Subagents" section)
+-- Task tool signals completion to VM via substrate
+
+-- VM marks branch complete after Task returns
+UPDATE execution SET status = 'completed', completed_at = datetime('now')
+WHERE json_extract(metadata, '$.parallel_id') = 'p1' AND json_extract(metadata, '$.branch') = 'a';
+
+-- VM checks if all branches complete
+SELECT COUNT(*) as pending FROM execution
+WHERE json_extract(metadata, '$.parallel_id') = 'p1' AND status != 'completed';
 ```
-
-**Append-only:** No UPDATEs to existing rows. Each event is a new INSERT.
 
 ---
 
 ## Loop Tracking
 
 ```sql
--- VM appends loop start
+-- Loop metadata tracks iteration state
 INSERT INTO execution (statement_index, statement_text, status, metadata)
-VALUES (10, 'loop', 'started', '{"loop_id": "l1", "max": 5, "condition": "**complete**"}');
+VALUES (10, 'loop until **analysis complete** (max: 5):', 'executing',
+  '{"loop_id": "l1", "max_iterations": 5, "current_iteration": 0, "condition": "**analysis complete**"}');
 
--- VM appends each iteration completion
-INSERT INTO execution (statement_index, statement_text, status, metadata)
-VALUES (10, 'loop', 'iteration', '{"loop_id": "l1", "iteration": 1}');
-
-INSERT INTO execution (statement_index, statement_text, status, metadata)
-VALUES (10, 'loop', 'iteration', '{"loop_id": "l1", "iteration": 2}');
-
--- VM appends exit
-INSERT INTO execution (statement_index, statement_text, status, metadata)
-VALUES (10, 'loop', 'exited', '{"loop_id": "l1", "iteration": 2, "reason": "condition_satisfied"}');
+-- Update iteration
+UPDATE execution
+SET metadata = json_set(metadata, '$.current_iteration', 2),
+    updated_at = datetime('now')
+WHERE json_extract(metadata, '$.loop_id') = 'l1';
 ```
-
-**Append-only:** Iterations are appended, not updated. Query `MAX(iteration)` to find current state.
 
 ---
 
 ## Error Handling
 
 ```sql
--- Append failure record
-INSERT INTO execution (statement_index, statement_text, status, error_message, metadata)
-VALUES (15, 'session "Risky"', 'failed', 'Connection timeout after 30s', '{}');
+-- Record failure
+UPDATE execution
+SET status = 'failed',
+    error_message = 'Connection timeout after 30s',
+    completed_at = datetime('now')
+WHERE id = 15;
 
--- Append retry attempt
-INSERT INTO execution (statement_index, statement_text, status, metadata)
-VALUES (15, 'session "Risky"', 'retry', '{"attempt": 2, "max": 3}');
-
--- Append eventual success or final failure
-INSERT INTO execution (statement_index, statement_text, status, metadata)
-VALUES (15, 'session "Risky"', 'completed', '{"attempt": 2}');
+-- Track retry attempts in metadata
+UPDATE execution
+SET metadata = json_set(metadata, '$.retry_attempt', 2, '$.max_retries', 3)
+WHERE id = 15;
 ```
-
-**Append-only:** Each retry is a new record. Query for the latest status by statement_index.
 
 ---
 
@@ -546,16 +503,16 @@ The database is your workspace. Use it.
 
 ## Comparison with Other Modes
 
-| Aspect | filesystem.md | in-context.md | sqlite.md |
-|--------|---------------|---------------|-----------|
-| **State location** | `.prose/runs/{id}/` files | Conversation history | `.prose/runs/{id}/state.db` |
-| **Queryable** | Via file reads | No | Yes (SQL) |
-| **Atomic updates** | No | N/A | Yes (transactions) |
-| **Schema flexibility** | Rigid file structure | N/A | Flexible (add tables/columns) |
-| **Resumption** | Read state.md | Re-read conversation | Query database |
-| **Complexity ceiling** | High | Low (<30 statements) | High |
-| **Dependency** | None | None | sqlite3 CLI |
-| **Status** | Stable | Stable | **Experimental** |
+| Aspect                 | filesystem.md             | in-context.md        | sqlite.md                     |
+| ---------------------- | ------------------------- | -------------------- | ----------------------------- |
+| **State location**     | `.prose/runs/{id}/` files | Conversation history | `.prose/runs/{id}/state.db`   |
+| **Queryable**          | Via file reads            | No                   | Yes (SQL)                     |
+| **Atomic updates**     | No                        | N/A                  | Yes (transactions)            |
+| **Schema flexibility** | Rigid file structure      | N/A                  | Flexible (add tables/columns) |
+| **Resumption**         | Read state.md             | Re-read conversation | Query database                |
+| **Complexity ceiling** | High                      | Low (<30 statements) | High                          |
+| **Dependency**         | None                      | None                 | sqlite3 CLI                   |
+| **Status**             | Stable                    | Stable               | **Experimental**              |
 
 ---
 
@@ -564,11 +521,11 @@ The database is your workspace. Use it.
 SQLite state management:
 
 1. Uses a **single database file** per run
-2. Uses **append-only writes** for minimal token overhead
-3. Provides **clear responsibility separation** between VM and subagents
-4. Enables **structured queries** for state inspection
+2. Provides **clear responsibility separation** between VM and subagents
+3. Enables **structured queries** for state inspection
+4. Supports **atomic transactions** for reliable updates
 5. Allows **flexible schema evolution** as needed
 6. Requires the **sqlite3 CLI** tool
 7. Is **experimental**—expect changes
 
-The core contract: the VM appends execution events (not updates); subagents write their own outputs directly to the database. The conversation is primary state; the database is for persistence and inspection.
+The core contract: the VM manages execution flow and spawns subagents; subagents write their own outputs directly to the database. Both maintain the principle that what happens is recorded, and what is recorded can be queried.

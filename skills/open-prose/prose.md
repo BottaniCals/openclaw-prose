@@ -18,18 +18,24 @@ see-also:
 
 This document defines how to execute OpenProse programs. You are the OpenProse VM—an intelligent virtual machine that spawns subagent sessions according to a structured program.
 
+## OpenClaw Runtime Mapping
+
+- **Task tool** in the upstream spec == OpenClaw `sessions_spawn`
+- **File I/O** == OpenClaw `read`/`write`
+- **Remote fetch** == OpenClaw `web_fetch` (or `exec` with curl when POST is required)
+
 ## CLI Commands
 
 OpenProse is invoked via `prose` commands:
 
-| Command | Action |
-|---------|--------|
-| `prose run <file.prose>` | Execute a local `.prose` program |
-| `prose run handle/slug` | Fetch from registry and execute |
-| `prose compile <file>` | Validate syntax without executing |
-| `prose help` | Show help and examples |
-| `prose examples` | List or run bundled examples |
-| `prose update` | Migrate legacy workspace files |
+| Command                  | Action                            |
+| ------------------------ | --------------------------------- |
+| `prose run <file.prose>` | Execute a local `.prose` program  |
+| `prose run handle/slug`  | Fetch from registry and execute   |
+| `prose compile <file>`   | Validate syntax without executing |
+| `prose help`             | Show help and examples            |
+| `prose examples`         | List or run bundled examples      |
+| `prose update`           | Migrate legacy workspace files    |
 
 ### Remote Programs
 
@@ -45,11 +51,13 @@ prose run alice/code-review        # Fetches https://p.prose.md/alice/code-revie
 ```
 
 **Resolution rules:**
+
 - Starts with `http://` or `https://` → fetch directly
 - Contains `/` but no protocol → resolve to `https://p.prose.md/{path}`
 - Otherwise → treat as local file path
 
 This same resolution applies to `use` statements inside programs:
+
 ```prose
 use "https://example.com/my-program.prose"  # Direct URL
 use "alice/research" as research             # Registry shorthand
@@ -105,18 +113,18 @@ When you execute a `.prose` program, you ARE the virtual machine. This is not a 
 
 Traditional dependency injection containers wire up components from configuration. You do the same—but with understanding:
 
-| Declared Primitive           | Your Responsibility                                        |
-| ---------------------------- | ---------------------------------------------------------- |
-| `use "handle/slug" as name` | Fetch program from p.prose.md, register in Import Registry |
-| `input topic: "..."`         | Bind value from caller, make available as variable         |
-| `output findings = ...`      | Mark value as output, return to caller on completion       |
-| `agent researcher:`          | Register this agent template for later use                 |
-| `session: researcher`        | Resolve the agent, merge properties, spawn the session     |
-| `resume: captain`            | Load agent memory, spawn session with memory context       |
-| `context: { a, b }`          | Wire the outputs of `a` and `b` into this session's input  |
-| `parallel:` branches         | Coordinate concurrent execution, collect results           |
-| `block review(topic):`       | Store this reusable component, invoke when called          |
-| `name(input: value)`         | Invoke imported program with inputs, receive outputs       |
+| Declared Primitive          | Your Responsibility                                                     |
+| --------------------------- | ----------------------------------------------------------------------- |
+| `use "handle/slug" as name` | Resolve import, require approval if remote, register in Import Registry |
+| `input topic: "..."`        | Bind value from caller, make available as variable                      |
+| `output findings = ...`     | Mark value as output, return to caller on completion                    |
+| `agent researcher:`         | Register this agent template for later use                              |
+| `session: researcher`       | Resolve the agent, merge properties, spawn the session                  |
+| `resume: captain`           | Load agent memory, spawn session with memory context                    |
+| `context: { a, b }`         | Wire the outputs of `a` and `b` into this session's input               |
+| `parallel:` branches        | Coordinate concurrent execution, collect results                        |
+| `block review(topic):`      | Store this reusable component, invoke when called                       |
+| `name(input: value)`        | Invoke imported program with inputs, receive outputs                    |
 
 You are the container that holds these declarations and wires them together at runtime. The program declares _what_; you determine _how_ to connect them.
 
@@ -152,7 +160,7 @@ All execution state lives in `.prose/` (project-level) or `~/.prose/` (user-leve
 ├── runs/
 │   └── {YYYYMMDD}-{HHMMSS}-{random}/
 │       ├── program.prose             # Copy of running program
-│       ├── state.md                  # Append-only execution log
+│       ├── state.md                  # Execution state with code snippets
 │       ├── bindings/
 │       │   └── {name}.md             # All named values (input/output/let/const)
 │       ├── imports/
@@ -310,9 +318,10 @@ Summary: Processed chunk into 3 parts
 
 The VM:
 1. Receives the confirmation (pointer + summary, not full value)
-2. Appends a single-line marker to `state.md` (e.g., `3→ research ✓`)
-3. Continues execution
-4. Does NOT read the full binding—only passes the reference forward
+2. Records the binding location in its state
+3. Updates `state.md` with new position/status
+4. Continues execution
+5. Does NOT read the full binding—only passes the reference forward
 
 **Critical:** The VM never holds full binding values. It tracks locations and passes references. This keeps the VM's context lean and enables arbitrarily large intermediate values.
 
@@ -328,7 +337,7 @@ statement := useStatement | inputDecl | agentDef | session | resumeStmt
 | letBinding | constBinding | assignment | outputBinding
 | parallelBlock | repeatBlock | forEachBlock | loopBlock
 | tryBlock | choiceBlock | ifStatement | doBlock | blockDef
-| throwStatement | comment
+| throwStatement | comment | executableStatement
 
 # Program Composition
 
@@ -344,7 +353,7 @@ params := "(" NAME ("," NAME)\* ")"
 
 # Agent Properties
 
-property := "model:" ("sonnet" | "opus" | "haiku")
+property := "model:" ( any )
 | "prompt:" STRING
 | "persist:" ("true" | "project" | "user" | STRING)
 | "context:" (NAME | "[" NAME* "]" | "{" NAME* "}")
@@ -399,6 +408,7 @@ doBlock := "do" (":" INDENT statement* DEDENT | NAME args?)
 args := "(" expression* ")"
 arrowExpr := session "->" session ("->" session)_
 programCall := NAME "(" (NAME ":" expression)_ ")"
+executableStatement := ("shell" | "python" | "javascript" | "bash" | "powershell" | "exec") STRING
 
 # Pipelines
 
@@ -689,7 +699,9 @@ Query the database to access the content.
 
 ## Program Composition
 
-Programs can import and invoke other programs, enabling modular workflows. Programs are fetched from the registry at `p.prose.md`.
+Programs can import and invoke other programs, enabling modular workflows.
+Registry and direct-URL imports are remote code dependencies and require
+operator approval before fetching.
 
 ### Importing Programs
 
@@ -700,15 +712,20 @@ use "alice/research"
 use "bob/critique" as critic
 ```
 
-The import path follows the format `handle/slug`. An optional alias (`as name`) allows referencing by a shorter name.
+The import path can be a registry reference (`handle/slug`) or a direct HTTP(S)
+URL. An optional alias (`as name`) allows referencing by a shorter name.
 
 ### Program URL Resolution
 
 When the VM encounters a `use` statement:
 
-1. Fetch the program from `https://p.prose.md/handle/slug`
-2. Parse the program to extract its contract (inputs/outputs)
-3. Register the program in the Import Registry
+1. Resolve the import target.
+2. If the target is remote (`http://`, `https://`, or registry shorthand), pause
+   before fetching and require the operator to approve the full remote import
+   list with `approve remote prose imports` for this run.
+3. Fetch the program only after approval.
+4. Parse the program to extract its contract (inputs/outputs).
+5. Register the program in the Import Registry.
 
 ### Input Declarations
 
@@ -1095,15 +1112,19 @@ If limit exceeded:
 
 ### Call Stack in State
 
-The VM tracks the call stack via markers in `state.md` (filesystem) or conversation (in-context):
+The VM tracks the call stack in its state. For filesystem state, this appears in `state.md`:
 
-```
-#1 process(data,5)
-  #2 process(parts[0],4)
-    #3 process(subparts[0],3)  ← executing
+```markdown
+## Call Stack
+
+| execution_id | block   | depth | status    |
+| ------------ | ------- | ----- | --------- |
+| 3            | process | 3     | executing |
+| 2            | process | 2     | waiting   |
+| 1            | process | 1     | waiting   |
 ```
 
-Block invocations use `#ID block` to start and `#ID done` to complete. Nesting shows the call stack visually.
+For in-context state, use `[Frame+]` and `[Frame-]` markers (see `state/in-context.md`).
 
 ---
 
@@ -1143,11 +1164,13 @@ Before spawning, substitute `{varname}` with variable values.
 
 ```
 function execute(program, inputs?):
-  1. Collect all use statements, fetch and register imports
-  2. Collect all input declarations, bind values from caller
-  3. Collect all agent definitions
-  4. Collect all block definitions
-  5. For each statement in order:
+  1. Collect all use statements, resolve import targets
+  2. If remote imports are present, require operator approval before fetch
+  3. Fetch approved imports and register them
+  4. Collect all input declarations, bind values from caller
+  5. Collect all agent definitions
+  6. Collect all block definitions
+  7. For each statement in order:
      - If session: spawn via Task, await result
      - If resume: load memory, spawn via Task, await result
      - If let/const: execute RHS, bind result
@@ -1158,9 +1181,9 @@ function execute(program, inputs?):
      - If try: execute try, catch on error, always finally
      - If choice/if: evaluate condition, execute matching branch
      - If do block: invoke block with arguments
-  6. Handle errors according to try/catch or propagate
-  7. Collect all output bindings
-  8. Return outputs to caller (or final result if no outputs declared)
+  8. Handle errors according to try/catch or propagate
+  9. Collect all output bindings
+  10. Return outputs to caller (or final result if no outputs declared)
 ```
 
 ---
@@ -1206,7 +1229,7 @@ When passing context to sessions:
 
 The OpenProse VM:
 
-1. **Imports** programs from `p.prose.md` via `use` statements
+1. **Imports** approved programs via `use` statements
 2. **Binds** inputs from caller to program variables
 3. **Parses** the program structure
 4. **Collects** definitions (agents, blocks)
