@@ -355,7 +355,6 @@ use "https://example.com/program.prose" as alias
 Import paths are either registry references or direct HTTP(S) URLs:
 
 - `@handle/slug` identifies a program author/organization and slug.
-- `handle/slug` resolves to the same registry host used by the runtime.
 - `https://example.com/program.prose` fetches that exact URL after approval.
 
 An optional alias (`as name`) allows referencing by a shorter name.
@@ -793,18 +792,18 @@ Each session waits for the previous one to complete before starting.
 
 ### Using Claude Code's Task Tool
 
-To execute a session, use the Task tool:
+To execute a session, use the sessions_spawn:
 
 ```typescript
 // Simple session
-Task({
+sessions_spawn({
   description: 'OpenProse session',
   prompt: 'The prompt from the session statement',
   subagent_type: 'general-purpose',
 });
 
 // Session with agent configuration
-Task({
+sessions_spawn({
   description: 'OpenProse session',
   prompt: 'The session prompt',
   subagent_type: 'general-purpose',

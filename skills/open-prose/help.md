@@ -121,7 +121,7 @@ For complete syntax and validation rules, see `compiler.md`.
 
 ## Examples
 
-The `examples/` directory contains 37 example programs:
+The `examples/` directory contains 48 example programs:
 
 | Range | Category                                                                          |
 | ----- | --------------------------------------------------------------------------------- |
@@ -136,6 +136,15 @@ The `examples/` directory contains 37 example programs:
 | 29-31 | Captain's chair pattern (persistent orchestrator)                                 |
 | 33-36 | Production workflows (PR auto-fix, content pipeline, feature factory, bug hunter) |
 | 37    | The Forge (build a browser from scratch)                                          |
+| 38    | Skill scan                                                                        |
+| 39    | Architect by simulation                                                           |
+| 40-43 | RLM (recursive language models)                                                   |
+| 44    | Run endpoint UX test                                                              |
+| 45    | Plugin release                                                                    |
+| 46    | Workflow crystallizer                                                              |
+| 47    | Language self-improvement                                                         |
+| 48    | Habit miner                                                                       |
+| 49    | Prose run retrospective                                                           |
 
 **Recommended starting points:**
 

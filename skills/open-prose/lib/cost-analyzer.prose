@@ -2,7 +2,7 @@
 # Analyzes runs for token usage and cost patterns
 #
 # Usage:
-#   prose run @openprose/lib/cost-analyzer
+#   prose run lib/cost-analyzer.prose
 #
 # Inputs:
 #   run_path: Path to run to analyze, or "recent" for latest runs

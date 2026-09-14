@@ -75,7 +75,7 @@ Use text-prefixed markers for each state change:
 
 ```
 [Position] Executing: session "Research the topic"
-   [Task tool call]
+   [sessions_spawn call]
 [Success] Session complete: "Research found that..."
 [Binding] let research = <result>
 ```
@@ -159,7 +159,7 @@ Track block invocations with frame markers:
    Arguments: chunk=data, depth=5
 
    [Position] session "Split into parts"
-      [Task tool call]
+      [sessions_spawn call]
    [Success] Session complete
    [Binding] let parts = <result> (execution_id: 1)
 
@@ -169,7 +169,7 @@ Track block invocations with frame markers:
       Parent: execution_id 1
 
       [Position] session "Split into parts"
-         [Task tool call]
+         [sessions_spawn call]
       [Success] Session complete
       [Binding] let parts = <result> (execution_id: 2)  # Shadows parent's 'parts'
 
@@ -178,7 +178,7 @@ Track block invocations with frame markers:
    [Frame-] Exiting block: process (execution_id: 2)
 
    [Position] session "Combine results"
-      [Task tool call]
+      [sessions_spawn call]
    [Success] Session complete
 
 [Frame-] Exiting block: process (execution_id: 1)
@@ -287,7 +287,7 @@ loop until **analysis complete** (max: 3):
 [Position] Statement 1: let research = session: researcher
    Spawning with prompt: "Research AI safety"
    Model: sonnet
-   [Task tool call]
+   [sessions_spawn call]
 [Success] Session complete: "AI safety research covers alignment..."
 [Binding] let research = <result>
 

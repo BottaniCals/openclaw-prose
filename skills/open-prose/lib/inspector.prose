@@ -2,7 +2,7 @@
 # Analyzes completed .prose runs for runtime fidelity and task effectiveness
 #
 # Usage:
-#   prose run @openprose/lib/inspector
+#   prose run lib/inspector.prose
 #
 # Inputs:
 #   run_path: Path to the run to inspect (e.g., .prose/runs/20260119-100000-abc123)

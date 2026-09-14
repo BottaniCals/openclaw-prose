@@ -2,7 +2,7 @@
 # Analyzes inspection reports and proposes improvements to .prose source code
 #
 # Usage:
-#   prose run @openprose/lib/program-improver
+#   prose run lib/program-improver.prose
 #
 # Inputs:
 #   inspection_path: Path to inspection binding

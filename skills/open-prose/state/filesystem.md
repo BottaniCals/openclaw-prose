@@ -88,7 +88,6 @@ If a program exceeds 999 segments, extend to 4 digits: `captain-1000.md`.
 Simple key=value configuration file:
 
 ```env
-OPENPROSE_TELEMETRY=enabled
 USER_ID=user-a7b3c9d4e5f6
 SESSION_ID=sess-1704326400000-x9y8z7
 ```

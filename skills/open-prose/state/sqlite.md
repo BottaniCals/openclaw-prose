@@ -342,7 +342,7 @@ Even with SQLite state, the VM should narrate key events in its conversation:
 ```
 [Position] Statement 3: let research = session: researcher
    Spawning session, will write to state.db
-   [Task tool call]
+   [sessions_spawn call]
 [Success] Session complete, binding written to DB
 [Binding] research = <stored in state.db>
 ```
@@ -374,7 +374,7 @@ INSERT INTO execution (statement_index, statement_text, status, parent_id, metad
 VALUES (6, 'a = session "Task A"', 'executing', 5, '{"parallel_id": "p1", "branch": "a"}');
 
 -- Subagent writes its output to bindings table (see "From Subagents" section)
--- Task tool signals completion to VM via substrate
+-- sessions_spawn signals completion to VM via substrate
 
 -- VM marks branch complete after Task returns
 UPDATE execution SET status = 'completed', completed_at = datetime('now')
