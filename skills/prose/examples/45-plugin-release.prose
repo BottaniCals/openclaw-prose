@@ -32,11 +32,11 @@ agent executor:
 parallel (on-fail: "fail-fast"):
   examples_valid = session: validator
     prompt: "Compile all .prose examples, report any syntax errors"
-    context: "skills/open-prose/examples/*.prose"
+    context: "skills/prose/examples/*.prose"
 
   docs_complete = session: validator
     prompt: "Verify README.md lists all example files that exist"
-    context: "skills/open-prose/examples/"
+    context: "skills/prose/examples/"
 
   repo_clean = session: executor
     prompt: "Check for uncommitted changes, correct branch"

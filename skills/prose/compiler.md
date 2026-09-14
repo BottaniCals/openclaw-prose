@@ -361,13 +361,13 @@ An optional alias (`as name`) allows referencing by a shorter name.
 
 ```prose
 # Import a program
-use "@alice/research"
+use "alice/research"
 
 # Import with alias
-use "@bob/critique" as critic
+use "bob/critique" as critic
 ```
 
-### Program URL Resolution
+### Program Path Resolution
 
 When the OpenProse VM encounters a `use` statement:
 
@@ -485,7 +485,7 @@ name(input1: value1, input2: value2)
 ### Examples
 
 ```prose
-use "@alice/research" as research
+use "alice/research" as research
 
 let result = research(topic: "quantum computing")
 ```
@@ -593,8 +593,8 @@ agent shared:
 The `skills` property assigns imported skills to an agent:
 
 ```prose
-use "@anthropic/web-search"
-use "@anthropic/summarizer" as summarizer
+use "anthropic/web-search"
+use "anthropic/summarizer" as summarizer
 
 agent researcher:
   skills: ["web-search", "summarizer"]
@@ -2794,8 +2794,8 @@ session: analyst
 
 ```prose
 # Import external programs
-use "@anthropic/web-search"
-use "@anthropic/file-writer" as file-writer
+use "anthropic/web-search"
+use "anthropic/file-writer" as file-writer
 
 # Define a secure research agent
 agent researcher:

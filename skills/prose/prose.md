@@ -672,8 +672,6 @@ Query the database to access the content.
 ## Program Composition
 
 Programs can import and invoke other programs, enabling modular workflows.
-Registry and direct-URL imports are remote code dependencies and require
-operator approval before fetching.
 
 ### Importing Programs
 
@@ -684,8 +682,7 @@ use "alice/research"
 use "bob/critique" as critic
 ```
 
-The import path is a local file path
-URL. An optional alias (`as name`) allows referencing by a shorter name.
+The import path is a local file path. An optional alias (`as name`) allows referencing by a shorter name.
 
 ### Program Path Resolution
 

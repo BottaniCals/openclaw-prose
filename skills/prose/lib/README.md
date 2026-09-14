@@ -9,6 +9,7 @@ Core programs that ship with OpenProse. Production-quality, well-tested programs
 | Program                  | Description                                                    |
 | ------------------------ | -------------------------------------------------------------- |
 | `inspector.prose`        | Post-run analysis for runtime fidelity and task effectiveness  |
+| `profiler.prose`         | Performance profiling and bottleneck identification            |
 | `vm-improver.prose`      | Analyzes inspections and proposes PRs to improve the VM        |
 | `program-improver.prose` | Analyzes inspections and proposes PRs to improve .prose source |
 | `cost-analyzer.prose`    | Token usage and cost pattern analysis                          |
@@ -52,13 +53,17 @@ Supporting analysis:
 prose run lib/inspector.prose
 # Inputs: run_path, depth (light|deep), target (vm|task|all)
 
+# Profile a run for performance bottlenecks
+prose run lib/profiler.prose
+# Inputs: run_path, scope (single|compare|trend)
+
 # Propose VM improvements
 prose run lib/vm-improver.prose
-# Inputs: inspection_path, prose_repo
+# Inputs: inspection_path, prose_repo, selection
 
 # Propose program improvements
 prose run lib/program-improver.prose
-# Inputs: inspection_path, run_path
+# Inputs: inspection_path, run_path, selection
 
 # Analyze costs
 prose run lib/cost-analyzer.prose
@@ -73,10 +78,10 @@ prose run lib/error-forensics.prose
 # Inputs: run_path, focus (vm|program|context|external)
 
 # Memory programs (recommend sqlite+ backend)
-prose run lib/user-memory.prose --backend sqlite+
+prose run lib/user-memory.prose --state=sqlite+
 # Inputs: mode (teach|query|reflect), content
 
-prose run lib/project-memory.prose --backend sqlite+
+prose run lib/project-memory.prose --state=sqlite+
 # Inputs: mode (ingest|query|update|summarize), content
 ```
 
@@ -96,7 +101,7 @@ The memory programs use persistent agents to accumulate knowledge:
 - Tracks why things are the way they are
 - Answers questions with project-specific context
 
-Both recommend `--backend sqlite+` for durable persistence.
+Both recommend `--state=sqlite+` for durable persistence.
 
 ## Design Principles
 
