@@ -44,8 +44,8 @@ Execute as:
 sessions_spawn(
   task: "Research quantum computing",
   label: "OpenProse session",
-  runtime: 'subagent'
-);```
+);
+```
 
 ### Context Passing (By Reference)
 
@@ -60,7 +60,7 @@ Read this file to access the content. The VM never holds full binding values.
 
 ### Parallel Execution
 
-`parallel:` blocks spawn multiple sessions concurrently—call all sessions_spawns in a single response:
+`parallel:` blocks spawn multiple sessions concurrently—call all sessions_spawn calls in a single response:
 
 ```prose
 parallel:
@@ -68,7 +68,7 @@ parallel:
   b = session "Task B"
 ```
 
-Execute by calling both sessions_spawns simultaneously, then wait for all to complete.
+Execute by calling both sessions_spawn calls simultaneously, then wait for all to complete.
 
 ### Persistent Agents
 
@@ -161,9 +161,8 @@ For general programming tasks, please use a general-purpose agent instance.
 ## Execution Algorithm (Simplified)
 
 1. Parse program structure (use statements, inputs, agents, blocks)
-2. Collect executable statements (`shell`, `python`, `javascript`, `bash`, `powershell`, `exec`). Before executing any of them, require the operator to reply exactly `approve executable statements` for this run. If approval is not given, skip execution and fail the statement.
-3. Bind inputs from caller or prompt user if missing
-4. For each statement in order:
+2. Bind inputs from caller or prompt user if missing
+3. For each statement in order:
    - `session` → sessions_spawn call, await result
    - `resume` → Load memory, sessions_spawn call, await result
    - `let/const` → Execute RHS, bind result
@@ -172,8 +171,8 @@ For general programming tasks, please use a general-purpose agent instance.
    - `try/catch` → Execute try, catch on error, always finally
    - `choice/if` → Evaluate conditions, execute matching branch
    - `do block` → Push frame, bind args, execute body, pop frame
-5. Collect output bindings
-6. Return outputs to caller
+4. Collect output bindings
+5. Return outputs to caller
 
 ## Remember
 

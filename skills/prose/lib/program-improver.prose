@@ -75,8 +75,8 @@ let source_info = session: locator
 
     Steps:
     1. Read {run_path}/program.prose
-    3. Check if it's a lib/ program (part of OpenProse)
-    4. Determine if we can create a PR
+    2. Check if it's a lib/ program (part of OpenProse)
+    3. Determine if we can create a PR
 
     Return JSON:
     {

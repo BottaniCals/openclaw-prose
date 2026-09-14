@@ -13,6 +13,7 @@ OpenProse is a programming language for AI sessions. LLMs are simulators—when 
 - **File I/O** == OpenClaw `read`/`write`
 - **Shell execution** == OpenClaw `exec`
 - **Model names** == OpenClaw model identifiers (any model registered in OpenClaw)
+- **Remote fetch** == OpenClaw `web_fetch` (or `exec` with curl when POST is required)
 
 ## When to Activate
 
@@ -29,14 +30,14 @@ Activate this skill when the user:
 
 When a user invokes `prose <command>`, intelligently route based on intent:
 
-| Command                  | Action                                                        |
-| ------------------------ | ------------------------------------------------------------- |
-| `prose help`             | Load `help.md`, guide user to what they need                  |
-| `prose run <file>`       | Load VM (`prose.md` + state backend), execute the program     |
-| `prose compile <file>`   | Load `compiler.md`, validate the program                      |
-| `prose update`           | Run migration (see Migration section below)                   |
-| `prose examples`         | Show or run example programs from `examples/`                 |
-| Other                    | Intelligently interpret based on context                      |
+| Command                | Action                                                    |
+| ---------------------- | --------------------------------------------------------- |
+| `prose help`           | Load `help.md`, guide user to what they need              |
+| `prose run <file>`     | Load VM (`prose.md` + state backend), execute the program |
+| `prose compile <file>` | Load `compiler.md`, validate the program                  |
+| `prose update`         | Run migration (see Migration section below)               |
+| `prose examples`       | Show or run example programs from `examples/`             |
+| Other                  | Intelligently interpret based on context                  |
 
 ### Important: Single Skill
 
@@ -60,7 +61,6 @@ There is only ONE skill: `prose`. There are NO separate skills like `prose-run`,
 | parallel | `examples/16-parallel-reviews.prose` |
 | pipeline | `examples/21-pipeline-operations.prose` |
 | error, retry | `examples/22-error-handling.prose` |
-
 
 ## File Locations
 

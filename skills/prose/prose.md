@@ -37,7 +37,6 @@ OpenProse is invoked via `prose` commands:
 | `prose examples`         | List or run bundled examples      |
 | `prose update`           | Migrate legacy workspace files    |
 
-
 ## Why This Is a VM
 
 Large language models are simulators. When given a detailed description of a system, they don't just _describe_ that system—they _simulate_ it. This document leverages that property: it describes a virtual machine with enough specificity that reading it causes a Prose Complete system to simulate that VM.
@@ -86,18 +85,18 @@ When you execute a `.prose` program, you ARE the virtual machine. This is not a 
 
 Traditional dependency injection containers wire up components from configuration. You do the same—but with understanding:
 
-| Declared Primitive          | Your Responsibility                                                     |
-| --------------------------- | ----------------------------------------------------------------------- |
+| Declared Primitive                 | Your Responsibility                                              |
+| ---------------------------------- | ---------------------------------------------------------------- |
 | `use "path/to/file.prose" as name` | Resolve import as a local file path, register in Import Registry |
-| `input topic: "..."`        | Bind value from caller, make available as variable                      |
-| `output findings = ...`     | Mark value as output, return to caller on completion                    |
-| `agent researcher:`         | Register this agent template for later use                              |
-| `session: researcher`       | Resolve the agent, merge properties, spawn the session                  |
-| `resume: captain`           | Load agent memory, spawn session with memory context                    |
-| `context: { a, b }`         | Wire the outputs of `a` and `b` into this session's input               |
-| `parallel:` branches        | Coordinate concurrent execution, collect results                        |
-| `block review(topic):`      | Store this reusable component, invoke when called                       |
-| `name(input: value)`        | Invoke imported program with inputs, receive outputs                    |
+| `input topic: "..."`               | Bind value from caller, make available as variable               |
+| `output findings = ...`            | Mark value as output, return to caller on completion             |
+| `agent researcher:`                | Register this agent template for later use                       |
+| `session: researcher`              | Resolve the agent, merge properties, spawn the session           |
+| `resume: captain`                  | Load agent memory, spawn session with memory context             |
+| `context: { a, b }`                | Wire the outputs of `a` and `b` into this session's input        |
+| `parallel:` branches               | Coordinate concurrent execution, collect results                 |
+| `block review(topic):`             | Store this reusable component, invoke when called                |
+| `name(input: value)`               | Invoke imported program with inputs, receive outputs             |
 
 You are the container that holds these declarations and wires them together at runtime. The program declares _what_; you determine _how_ to connect them.
 
@@ -491,7 +490,8 @@ sessions_spawn(
   task: "Analyze the codebase",
   label: "OpenProse session",
   runtime: 'subagent'
-);```
+);
+```
 
 ### With Agent Configuration
 
@@ -517,7 +517,7 @@ sessions_spawn(
 
 ### With Persistent Agent (resume)
 
-```prose
+```
 agent captain:
   model: opus
   persist: true
@@ -680,7 +680,7 @@ operator approval before fetching.
 Use the `use` statement to import a program:
 
 ```prose
-use "@alice/research"
+use "alice/research"
 use "bob/critique" as critic
 ```
 
@@ -786,7 +786,7 @@ The `output` keyword:
 Call an imported program by providing its inputs:
 
 ```prose
-use "@alice/research" as research
+use "alice/research" as research
 
 let result = research(topic: "quantum computing")
 ```
