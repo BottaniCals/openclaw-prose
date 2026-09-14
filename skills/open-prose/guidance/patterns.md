@@ -200,33 +200,33 @@ session "Execute main workflow"
 
 Match model capability to task complexity:
 
-| Model | Best For | Examples |
-|-------|----------|----------|
-| **Sonnet 4.5** | Orchestration, control flow, coordination | VM execution, captain's chair, workflow routing |
-| **Opus 4.5** | Hard/difficult work requiring deep reasoning | Complex analysis, strategic decisions, novel problem-solving |
-| **Haiku** | Simple, self-evident tasks (use sparingly) | Classification, summarization, formatting |
+| Model          | Best For                                     | Examples                                                     |
+| -------------- | -------------------------------------------- | ------------------------------------------------------------ |
+| **Sonnet 4.5** | Orchestration, control flow, coordination    | VM execution, captain's chair, workflow routing              |
+| **Opus 4.5**   | Hard/difficult work requiring deep reasoning | Complex analysis, strategic decisions, novel problem-solving |
+| **Haiku**      | Simple, self-evident tasks (use sparingly)   | Classification, summarization, formatting                    |
 
-**Key insight:** Sonnet 4.5 excels at *orchestrating* agents and managing control flow—it's the ideal model for the OpenProse VM itself and for "captain" agents that coordinate work. Opus 4.5 should be reserved for agents doing genuinely difficult intellectual work. Haiku can handle simple tasks but should generally be avoided where quality matters.
+**Key insight:** Sonnet 4.5 excels at _orchestrating_ agents and managing control flow—it's the ideal model for the OpenProse VM itself and for "captain" agents that coordinate work. Opus 4.5 should be reserved for agents doing genuinely difficult intellectual work. Haiku can handle simple tasks but should generally be avoided where quality matters.
 
 **Detailed task-to-model mapping:**
 
-| Task Type | Model | Rationale |
-|-----------|-------|-----------|
-| Orchestration, routing, coordination | Sonnet | Fast, good at following structure |
-| Investigation, debugging, diagnosis | Sonnet | Structured analysis, checklist-style work |
-| Triage, classification, categorization | Sonnet | Clear criteria, deterministic decisions |
-| Code review, verification (checklist) | Sonnet | Following defined review criteria |
-| Simple implementation, fixes | Sonnet | Applying known patterns |
-| Complex multi-file synthesis | Opus | Needs to hold many things in context |
-| Novel architecture, strategic planning | Opus | Requires creative problem-solving |
-| Ambiguous problems, unclear requirements | Opus | Needs to reason through uncertainty |
+| Task Type                                | Model  | Rationale                                 |
+| ---------------------------------------- | ------ | ----------------------------------------- |
+| Orchestration, routing, coordination     | Sonnet | Fast, good at following structure         |
+| Investigation, debugging, diagnosis      | Sonnet | Structured analysis, checklist-style work |
+| Triage, classification, categorization   | Sonnet | Clear criteria, deterministic decisions   |
+| Code review, verification (checklist)    | Sonnet | Following defined review criteria         |
+| Simple implementation, fixes             | Sonnet | Applying known patterns                   |
+| Complex multi-file synthesis             | Opus   | Needs to hold many things in context      |
+| Novel architecture, strategic planning   | Opus   | Requires creative problem-solving         |
+| Ambiguous problems, unclear requirements | Opus   | Needs to reason through uncertainty       |
 
 **Rule of thumb:** If you can write a checklist for the task, Sonnet can do it. If the task requires genuine creativity or navigating ambiguity, use Opus.
 
 ```prose
 agent captain:
   model: sonnet  # Orchestration and coordination
-  persist: true
+  persist: true  # Execution-scoped (dies with run)
   prompt: "You coordinate the team and review work"
 
 agent researcher:
@@ -236,6 +236,11 @@ agent researcher:
 agent formatter:
   model: haiku  # Simple transformation (use sparingly)
   prompt: "You format text into consistent structure"
+
+agent preferences:
+  model: sonnet
+  persist: user  # User-scoped (survives across projects)
+  prompt: "You remember user preferences and patterns"
 
 # Captain orchestrates, specialists do the hard work
 session: captain
