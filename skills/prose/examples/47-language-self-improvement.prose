@@ -3,7 +3,7 @@
 # Meta-level 2: while the crystallizer creates .prose files, this improves .prose
 #
 # BACKEND: Run with sqlite+ or postgres backend for corpus-scale analysis
-#   prose run 47-language-self-improvement.prose --backend sqlite+
+#   prose run 47-language-self-improvement.prose --state=sqlite+
 #
 # This program treats OpenProse programs as its corpus, looking for:
 # - Workarounds (patterns that exist because the language lacks a cleaner way)

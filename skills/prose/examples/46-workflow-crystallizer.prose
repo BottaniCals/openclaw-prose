@@ -12,9 +12,9 @@ input thread: "The conversation thread to analyze"
 input hint: "Optional: What aspect to focus on"
 
 # Always fetch latest guidance from source of truth
-const PROSE_SPEC_URL = "https://raw.githubusercontent.com/openprose/prose/refs/heads/main/skills/open-prose/prose.md"
-const PATTERNS_URL = "https://raw.githubusercontent.com/openprose/prose/refs/heads/main/skills/open-prose/guidance/patterns.md"
-const ANTIPATTERNS_URL = "https://raw.githubusercontent.com/openprose/prose/refs/heads/main/skills/open-prose/guidance/antipatterns.md"
+const PROSE_SPEC_URL = "https://raw.githubusercontent.com/openprose/prose/refs/heads/main/skills/prose/prose.md"
+const PATTERNS_URL = "https://raw.githubusercontent.com/openprose/prose/refs/heads/main/skills/prose/guidance/patterns.md"
+const ANTIPATTERNS_URL = "https://raw.githubusercontent.com/openprose/prose/refs/heads/main/skills/prose/guidance/antipatterns.md"
 
 agent observer:
   model: opus
@@ -76,7 +76,7 @@ parallel:
 
   existing_examples = session: researcher
     prompt: "List all .prose examples with one-line summaries"
-    context: "skills/open-prose/examples/"
+    context: "skills/prose/examples/"
 
   existing_ops = session: researcher
     prompt: "What operational .prose files already exist?"
@@ -84,7 +84,7 @@ parallel:
 
   patterns_used = session: researcher
     prompt: "What patterns does this codebase favor?"
-    context: "skills/open-prose/examples/*.prose"
+    context: "skills/prose/examples/*.prose"
 
 # ============================================================
 # Phase 2: Scope (parallel analysis, then synthesis)

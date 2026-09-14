@@ -98,7 +98,7 @@ These keywords already have poetic quality or are too functional to replace sens
 
 ```prose
 # Functional
-use "@alice/research" as research
+use "alice/research" as research
 input topic: "What to investigate"
 
 agent helper:
@@ -113,7 +113,7 @@ output summary = session "Summarize"
 
 ```prose
 # Folk
-summon "@alice/research" as research
+summon "alice/research" as research
 given topic: "What to investigate"
 
 sprite helper:

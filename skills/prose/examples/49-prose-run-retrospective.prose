@@ -4,8 +4,8 @@
 input run_id: "Path to the completed run directory"
 input prose_path: "Path to the .prose file that was executed"
 
-const PATTERNS_PATH = "prose/skills/open-prose/guidance/patterns.md"
-const ANTIPATTERNS_PATH = "prose/skills/open-prose/guidance/antipatterns.md"
+const PATTERNS_PATH = "prose/skills/prose/guidance/patterns.md"
+const ANTIPATTERNS_PATH = "prose/skills/prose/guidance/antipatterns.md"
 
 agent analyst:
   model: sonnet

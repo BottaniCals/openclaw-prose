@@ -3,7 +3,7 @@
 # Scans .claude, .opencode, .cursor, etc. — discovers patterns, writes .prose programs
 #
 # BACKEND: Run with sqlite+ or postgres for incremental processing across runs
-#   prose run 48-habit-miner.prose --backend sqlite+
+#   prose run 48-habit-miner.prose --state=sqlite+
 #
 # KEY VM FEATURES USED:
 # - persist: true on miner — remembers patterns across runs, watches them mature

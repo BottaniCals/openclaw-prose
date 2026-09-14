@@ -98,7 +98,7 @@ These keywords already work or are too functional to replace sensibly:
 
 ```prose
 # Functional
-use "@alice/research" as research
+use "alice/research" as research
 input topic: "What to investigate"
 
 agent helper:
@@ -113,7 +113,7 @@ output summary = session "Summarize"
 
 ```prose
 # Borges
-retrieve "@alice/research" as research
+retrieve "alice/research" as research
 axiom topic: "What to investigate"
 
 dreamer helper:

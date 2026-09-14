@@ -105,7 +105,7 @@ When you need to read `prose.md` or `compiler.md`, read them from the same direc
 | `prose.md`                 | VM / Interpreter                | Always load to run programs                                           |
 | `state/filesystem.md`      | File-based state                | Load with VM (default)                                                |
 | `state/in-context.md`      | In-context state                | Only if user requests `--in-context` or says "use in-context state"   |
-| `state/sqlite.md`          | SQLite state (experimental)     | Only if user requests `--state=sqlite` (requires sqlite3 CLI)         |
+| `state/sqlite.md`          | SQLite state (experimental)     | Only if user requests `--state=sqlite` or `--state=sqlite+` (memory programs; requires sqlite3 CLI)         |
 | `state/postgres.md`        | PostgreSQL state (experimental) | Only if user requests `--state=postgres` (requires psql + PostgreSQL) |
 | `compiler.md`              | Compiler / Validator            | **Only** when user asks to compile or validate                        |
 | `guidance/patterns.md`     | Best practices                  | Load when **writing** new .prose files                                |

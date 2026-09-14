@@ -326,7 +326,7 @@ The VM must track these state categories in narration:
 
 | Category                | What to Track                             | Example                                      |
 | ----------------------- | ----------------------------------------- | -------------------------------------------- |
-| **Import Registry**     | Imported programs and aliases             | `research: @alice/research`                  |
+| **Import Registry**     | Imported programs and aliases             | `research: alice/research`                  |
 | **Agent Registry**      | All agent definitions                     | `researcher: {model: sonnet, prompt: "..."}` |
 | **Block Registry**      | All block definitions (hoisted)           | `review: {params: [topic], body: [...]}`     |
 | **Input Bindings**      | Inputs received from caller               | `topic = "quantum computing"`                |

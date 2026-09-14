@@ -16,7 +16,7 @@
 #   prose run 38-skill-scan.prose mode:"quick"              # Fast triage only
 #   prose run 38-skill-scan.prose mode:"deep"               # Full analysis, all skills
 #   prose run 38-skill-scan.prose focus:"prompt-injection"  # Focus on specific category
-#   prose run 38-skill-scan.prose --backend sqlite+         # Enable persistent history
+#   prose run 38-skill-scan.prose --state=sqlite+         # Enable persistent history
 
 input mode: "Scan mode: 'quick' (triage only), 'standard' (triage + deep on concerns), 'deep' (full analysis)"
 input focus: "Optional: Focus on specific category (malicious, exfiltration, injection, permissions, hooks)"

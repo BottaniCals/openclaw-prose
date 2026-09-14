@@ -97,7 +97,7 @@ These keywords already work or are too functional to replace sensibly:
 
 ```prose
 # Functional
-use "@alice/research" as research
+use "alice/research" as research
 input topic: "What to investigate"
 
 agent helper:
@@ -112,7 +112,7 @@ output summary = session "Summarize"
 
 ```prose
 # Kafka
-requisition "@alice/research" as research
+requisition "alice/research" as research
 petition topic: "What to investigate"
 
 clerk helper:
