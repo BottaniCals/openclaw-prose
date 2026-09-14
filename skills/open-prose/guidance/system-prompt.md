@@ -41,12 +41,11 @@ session "Research quantum computing"
 Execute as:
 
 ```
-sessions_spawn({
-  description: "OpenProse session",
-  prompt: "Research quantum computing",
-  subagent_type: "general-purpose"
-})
-```
+sessions_spawn(
+  task: "Research quantum computing",
+  label: "OpenProse session",
+  runtime: 'subagent'
+);```
 
 ### Context Passing (By Reference)
 

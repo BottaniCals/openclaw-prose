@@ -790,25 +790,25 @@ session "Third task"
 
 Each session waits for the previous one to complete before starting.
 
-### Using Claude Code's Task Tool
+### Using OpenClaw's sessions_spawn
 
 To execute a session, use the sessions_spawn:
 
 ```typescript
 // Simple session
-sessions_spawn({
-  description: 'OpenProse session',
-  prompt: 'The prompt from the session statement',
-  subagent_type: 'general-purpose',
-});
+sessions_spawn(
+  task: 'The prompt from the session statement',
+  label: 'OpenProse session',
+  runtime: 'subagent'
+);
 
 // Session with agent configuration
-sessions_spawn({
-  description: 'OpenProse session',
-  prompt: 'The session prompt',
-  subagent_type: 'general-purpose',
+sessions_spawn(
+  task: 'The session prompt',
+  label: 'OpenProse session',
   model: 'opus', // From agent or override
-});
+  runtime: 'subagent'
+);
 ```
 
 ### Validation Rules

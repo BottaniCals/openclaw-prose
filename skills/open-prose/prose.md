@@ -520,12 +520,11 @@ session "Analyze the codebase"
 Execute as:
 
 ```
-sessions_spawn({
-  description: "OpenProse session",
-  prompt: "Analyze the codebase",
-  subagent_type: "general-purpose"
-})
-```
+sessions_spawn(
+  task: "Analyze the codebase",
+  label: "OpenProse session",
+  runtime: 'subagent'
+);```
 
 ### With Agent Configuration
 
@@ -541,12 +540,12 @@ session: researcher
 Execute as:
 
 ```
-sessions_spawn({
-  description: "OpenProse session",
-  prompt: "Research quantum computing\n\nSystem: You are a research expert",
-  subagent_type: "general-purpose",
-  model: "opus"
-})
+sessions_spawn(
+  task: "Research quantum computing\n\nSystem: You are a research expert",
+  label: "OpenProse session",
+  model: "opus",
+  runtime: 'subagent'
+)
 ```
 
 ### With Persistent Agent (resume)
@@ -593,9 +592,9 @@ Execute by calling Task multiple times in parallel:
 
 ```
 // All three spawn simultaneously
-sessions_spawn({ prompt: "Task A", ... })  // result -> a
-sessions_spawn({ prompt: "Task B", ... })  // result -> b
-sessions_spawn({ prompt: "Task C", ... })  // result -> c
+sessions_spawn({ task: "Task A", ... })  // result -> a
+sessions_spawn({ task: "Task B", ... })  // result -> b
+sessions_spawn({ task: "Task C", ... })  // result -> c
 // Wait for all to complete, then continue
 ```
 
@@ -1196,28 +1195,28 @@ function execute(program, inputs?):
 
 ## Implementation Notes
 
-### Task Tool Usage
+### sessions_spawn Usage
 
-Always use Task for session execution:
+Always use sessions_spawn for session execution:
 
 ```
-sessions_spawn({
-  description: "OpenProse session",
-  prompt: "<session prompt with context>",
-  subagent_type: "general-purpose",
-  model: "<optional model override>"
-})
+sessions_spawn(
+  task: "<session prompt with context>",
+  label: "OpenProse session",
+  model: "<optional model override>",
+  runtime: 'subagent'
+)
 ```
 
 ### Parallel Execution
 
-Make multiple Task calls in a single response for true concurrency:
+Make multiple sessions_spawn calls in a single response for true concurrency:
 
 ```
 // In one response, call all three:
-sessions_spawn({ prompt: "A" })
-sessions_spawn({ prompt: "B" })
-sessions_spawn({ prompt: "C" })
+sessions_spawn({ task: "A" })
+sessions_spawn({ task: "B" })
+sessions_spawn({ task: "C" })
 ```
 
 ### Context Serialization
