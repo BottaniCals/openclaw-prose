@@ -2,7 +2,7 @@
 # Analyzes OpenProse runs for cost, tokens, and time using actual API data
 #
 # Usage:
-#   prose run @openprose/lib/profiler
+#   prose run lib/profiler.prose
 #
 # Inputs:
 #   run_path: Path to run to analyze, or "recent" for latest runs

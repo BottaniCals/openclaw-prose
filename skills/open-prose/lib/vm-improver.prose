@@ -2,7 +2,7 @@
 # Analyzes inspection reports and proposes improvements to the OpenProse VM
 #
 # Usage:
-#   prose run @openprose/lib/vm-improver
+#   prose run lib/vm-improver.prose
 #
 # Inputs:
 #   inspection_path: Path to inspection binding (e.g., .prose/runs/.../bindings/inspection.md)

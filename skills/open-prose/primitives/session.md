@@ -542,7 +542,7 @@ The VM never holds full binding values in its working memory. This is intentiona
 
 ### 7.3 What NOT to Return
 
-Do NOT return your full output in the Task tool response. The VM will ignore it.
+Do NOT return your full output in the sessions_spawn response. The VM will ignore it.
 
 **Bad:**
 

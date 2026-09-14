@@ -2,7 +2,7 @@
 # A persistent agent that learns and remembers across all your projects
 #
 # Usage:
-#   prose run @openprose/lib/user-memory --backend sqlite+
+#   prose run lib/user-memory.prose --backend sqlite+
 #
 # Recommended backend: sqlite+ (for durable cross-project persistence)
 #

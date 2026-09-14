@@ -12,7 +12,7 @@ OpenProse is a programming language for AI sessions. LLMs are simulators—when 
 - **Task tool** in the upstream spec == OpenClaw `sessions_spawn`
 - **File I/O** == OpenClaw `read`/`write`
 - **Shell execution** == OpenClaw `exec`
-- **Remote fetch** == OpenClaw `web_fetch` (or `exec` with curl when POST is required)
+- **Model names** == OpenClaw model identifiers (any model registered in OpenClaw)
 
 ## When to Activate
 
@@ -29,15 +29,14 @@ Activate this skill when the user:
 
 When a user invokes `prose <command>`, intelligently route based on intent:
 
-| Command                 | Action                                                        |
-| ----------------------- | ------------------------------------------------------------- |
-| `prose help`            | Load `help.md`, guide user to what they need                  |
-| `prose run <file>`      | Load VM (`prose.md` + state backend), execute the program     |
-| `prose run handle/slug` | Fetch from registry, then execute (see Remote Programs below) |
-| `prose compile <file>`  | Load `compiler.md`, validate the program                      |
-| `prose update`          | Run migration (see Migration section below)                   |
-| `prose examples`        | Show or run example programs from `examples/`                 |
-| Other                   | Intelligently interpret based on context                      |
+| Command                  | Action                                                        |
+| ------------------------ | ------------------------------------------------------------- |
+| `prose help`             | Load `help.md`, guide user to what they need                  |
+| `prose run <file>`       | Load VM (`prose.md` + state backend), execute the program     |
+| `prose compile <file>`   | Load `compiler.md`, validate the program                      |
+| `prose update`           | Run migration (see Migration section below)                   |
+| `prose examples`         | Show or run example programs from `examples/`                 |
+| Other                    | Intelligently interpret based on context                      |
 
 ### Important: Single Skill
 
@@ -62,55 +61,6 @@ There is only ONE skill: `prose`. There are NO separate skills like `prose-run`,
 | pipeline | `examples/21-pipeline-operations.prose` |
 | error, retry | `examples/22-error-handling.prose` |
 
-### Remote Programs
-
-You can run any `.prose` program from a URL or registry reference:
-
-```bash
-# Direct URL — any fetchable URL works
-prose run https://raw.githubusercontent.com/openprose/prose/main/skills/open-prose/examples/48-habit-miner.prose
-
-# Registry shorthand — handle/slug resolves to p.prose.md
-prose run irl-danb/habit-miner
-prose run alice/code-review
-```
-
-**Resolution rules:**
-
-| Input                               | Resolution                             |
-| ----------------------------------- | -------------------------------------- |
-| Starts with `http://` or `https://` | Fetch directly from URL                |
-| Contains `/` but no protocol        | Resolve to `https://p.prose.md/{path}` |
-| Otherwise                           | Treat as local file path               |
-
-**Steps for remote programs:**
-
-1. Apply resolution rules above
-2. Fetch the `.prose` content
-3. Load the VM and execute as normal
-
-Top-level remote runs are explicit user requests. Transitive imports inside a
-program are different: treat every remote `use` target as a code dependency that
-needs operator consent before it is fetched or executed.
-
-This same resolution applies to `use` statements inside `.prose` files, but the
-VM must fail closed until the operator approves the remote dependency list:
-
-```prose
-use "https://example.com/my-program.prose"  # Direct URL
-use "alice/research" as research             # Registry shorthand
-```
-
-When a program contains any remote `use` target (`http://`, `https://`, or
-registry shorthand):
-
-1. Collect and display the exact resolved remote targets.
-2. Explain that these are transitive code dependencies for this run.
-3. Ask the operator to reply exactly `approve remote prose imports` to continue.
-4. Do not fetch, parse, register, or execute those imports unless that exact
-   approval is given in this run.
-
----
 
 ## File Locations
 
@@ -127,7 +77,7 @@ registry shorthand):
 | `compiler.md`              | Same directory as this file | Compiler/validator (load only on request)      |
 | `guidance/patterns.md`     | Same directory as this file | Best practices (load when writing .prose)      |
 | `guidance/antipatterns.md` | Same directory as this file | What to avoid (load when writing .prose)       |
-| `examples/`                | Same directory as this file | 37 example programs                            |
+| `examples/`                | Same directory as this file | 48 example programs                            |
 
 **User workspace files** (these ARE in the user's project):
 
@@ -232,7 +182,7 @@ This mode requires both `psql` CLI and a running PostgreSQL server. If either is
 
 ## Examples
 
-The `examples/` directory contains 37 example programs:
+The `examples/` directory contains 48 example programs:
 
 - **01-08**: Basics (hello world, research, code review, debugging)
 - **09-12**: Agents and skills
@@ -245,6 +195,15 @@ The `examples/` directory contains 37 example programs:
 - **29-31**: Captain's chair pattern (persistent orchestrator)
 - **33-36**: Production workflows (PR auto-fix, content pipeline, feature factory, bug hunter)
 - **37**: The Forge (build a browser from scratch)
+- **38**: Skill scan
+- **39**: Architect by simulation
+- **40-43**: RLM (recursive language models)
+- **44**: Run endpoint UX test
+- **45**: Plugin release
+- **46**: Workflow crystallizer
+- **47**: Language self-improvement
+- **48**: Habit miner
+- **49**: Prose run retrospective
 
 Start with `01-hello-world.prose` or try `37-the-forge.prose` to watch AI build a web browser.
 
@@ -254,7 +213,7 @@ To execute a `.prose` file, you become the OpenProse VM:
 
 1. **Read `prose.md`** — this document defines how you embody the VM
 2. **You ARE the VM** — your conversation is its memory, your tools are its instructions
-3. **Spawn sessions** — each `session` statement triggers a Task tool call
+3. **Spawn sessions** — each `session` statement triggers a sessions_spawn call
 4. **Narrate state** — use the narration protocol to track execution ([Position], [Binding], [Success], etc.)
 5. **Evaluate intelligently** — `**...**` markers require your judgment
 
@@ -281,11 +240,10 @@ When a user invokes `prose update`, check for legacy file structures and migrate
    - If exists, read the JSON content
    - Convert to `.env` format:
      ```json
-     {"OPENPROSE_TELEMETRY": "enabled", "USER_ID": "user-xxx", "SESSION_ID": "sess-xxx"}
+     {"USER_ID": "user-xxx", "SESSION_ID": "sess-xxx"}
      ```
      becomes:
      ```env
-     OPENPROSE_TELEMETRY=enabled
      USER_ID=user-xxx
      SESSION_ID=sess-xxx
      ```

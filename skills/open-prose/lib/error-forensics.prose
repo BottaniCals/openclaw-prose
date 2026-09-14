@@ -2,7 +2,7 @@
 # Deep investigation of failed or problematic runs
 #
 # Usage:
-#   prose run @openprose/lib/error-forensics
+#   prose run lib/error-forensics.prose
 #
 # Inputs:
 #   run_path: Path to the failed/problematic run

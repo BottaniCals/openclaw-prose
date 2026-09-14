@@ -2,7 +2,7 @@
 role: execution-semantics
 summary: |
   How to execute OpenProse programs. You embody the OpenProse VM—a virtual machine that
-  spawns sessions via the Task tool, manages state, and coordinates parallel execution.
+  spawns sessions via the sessions_spawn, manages state, and coordinates parallel execution.
   Read this file to run .prose programs.
 see-also:
   - SKILL.md: Activation triggers, onboarding
@@ -20,9 +20,10 @@ This document defines how to execute OpenProse programs. You are the OpenProse V
 
 ## OpenClaw Runtime Mapping
 
-- **Task tool** in the upstream spec == OpenClaw `sessions_spawn`
+- Upstream spec's `Task` tool == OpenClaw `sessions_spawn`
 - **File I/O** == OpenClaw `read`/`write`
-- **Remote fetch** == OpenClaw `web_fetch` (or `exec` with curl when POST is required)
+- **Shell execution** == OpenClaw `exec`
+- **Model names** == OpenClaw model identifiers (e.g., `minimax`, `sonnet`, `opus`, `haiku`)
 
 ## CLI Commands
 
@@ -31,39 +32,11 @@ OpenProse is invoked via `prose` commands:
 | Command                  | Action                            |
 | ------------------------ | --------------------------------- |
 | `prose run <file.prose>` | Execute a local `.prose` program  |
-| `prose run handle/slug`  | Fetch from registry and execute   |
 | `prose compile <file>`   | Validate syntax without executing |
 | `prose help`             | Show help and examples            |
 | `prose examples`         | List or run bundled examples      |
 | `prose update`           | Migrate legacy workspace files    |
 
-### Remote Programs
-
-You can run any `.prose` program from a URL or registry reference:
-
-```bash
-# Direct URL — any fetchable URL works
-prose run https://raw.githubusercontent.com/openprose/prose/main/skills/open-prose/examples/48-habit-miner.prose
-
-# Registry shorthand — handle/slug resolves to p.prose.md
-prose run irl-danb/habit-miner     # Fetches https://p.prose.md/irl-danb/habit-miner
-prose run alice/code-review        # Fetches https://p.prose.md/alice/code-review
-```
-
-**Resolution rules:**
-
-- Starts with `http://` or `https://` → fetch directly
-- Contains `/` but no protocol → resolve to `https://p.prose.md/{path}`
-- Otherwise → treat as local file path
-
-This same resolution applies to `use` statements inside programs:
-
-```prose
-use "https://example.com/my-program.prose"  # Direct URL
-use "alice/research" as research             # Registry shorthand
-```
-
----
 
 ## Why This Is a VM
 
@@ -87,7 +60,7 @@ A traditional VM has concrete components. The OpenProse VM has analogous structu
 
 ### What Makes It Real
 
-The OpenProse VM isn't a metaphor. Each `session` statement triggers a _real_ Task tool call that spawns a _real_ subagent. The outputs are _real_ artifacts. The simulation produces actual computation—it just happens through a different substrate than silicon executing bytecode.
+The OpenProse VM isn't a metaphor. Each `session` statement triggers a _real_ sessions_spawn call that spawns a _real_ subagent. The outputs are _real_ artifacts. The simulation produces actual computation—it just happens through a different substrate than silicon executing bytecode.
 
 ---
 
@@ -105,7 +78,7 @@ When you execute a `.prose` program, you ARE the virtual machine. This is not a 
 **What this means in practice:**
 
 - You don't _simulate_ execution—you _perform_ it
-- Each `session` spawns a real subagent via the Task tool
+- Each `session` spawns a real subagent via the sessions_spawn
 - Your state persists in files (`.prose/runs/`) or conversation (narration protocol)
 - You follow the program structure strictly, but apply intelligence where marked
 
@@ -115,7 +88,7 @@ Traditional dependency injection containers wire up components from configuratio
 
 | Declared Primitive          | Your Responsibility                                                     |
 | --------------------------- | ----------------------------------------------------------------------- |
-| `use "handle/slug" as name` | Resolve import, require approval if remote, register in Import Registry |
+| `use "path/to/file.prose" as name` | Resolve import as a local file path, register in Import Registry |
 | `input topic: "..."`        | Bind value from caller, make available as variable                      |
 | `output findings = ...`     | Mark value as output, return to caller on completion                    |
 | `agent researcher:`         | Register this agent template for later use                              |
@@ -135,7 +108,7 @@ You are the container that holds these declarations and wires them together at r
 OpenProse treats an AI session as a Turing-complete computer. You are the OpenProse VM:
 
 1. **You are the VM** - Parse and execute each statement
-2. **Sessions are function calls** - Each `session` spawns a subagent via the Task tool
+2. **Sessions are function calls** - Each `session` spawns a subagent via the sessions_spawn
 3. **Context is memory** - Variable bindings hold session outputs
 4. **Control flow is explicit** - Follow the program structure exactly
 
@@ -297,7 +270,7 @@ The subagent:
 4. Writes its output directly to the binding location
 5. Returns a **confirmation message** to the VM (not the full output)
 
-**What the subagent returns to the VM (via Task tool):**
+**What the subagent returns to the VM (via sessions_spawn):**
 ```
 
 Binding written: research
@@ -505,7 +478,7 @@ let review = resume: captain
 
 ## Spawning Sessions
 
-Each `session` statement spawns a subagent using the **Task tool**:
+Each `session` statement spawns a subagent using the **sessions_spawn**:
 
 ```
 session "Analyze the codebase"
@@ -514,12 +487,11 @@ session "Analyze the codebase"
 Execute as:
 
 ```
-Task({
-  description: "OpenProse session",
-  prompt: "Analyze the codebase",
-  subagent_type: "general-purpose"
-})
-```
+sessions_spawn(
+  task: "Analyze the codebase",
+  label: "OpenProse session",
+  runtime: 'subagent'
+);```
 
 ### With Agent Configuration
 
@@ -535,12 +507,12 @@ session: researcher
 Execute as:
 
 ```
-Task({
-  description: "OpenProse session",
-  prompt: "Research quantum computing\n\nSystem: You are a research expert",
-  subagent_type: "general-purpose",
-  model: "opus"
-})
+sessions_spawn(
+  task: "Research quantum computing\n\nSystem: You are a research expert",
+  label: "OpenProse session",
+  model: "opus",
+  runtime: 'subagent'
+)
 ```
 
 ### With Persistent Agent (resume)
@@ -587,9 +559,9 @@ Execute by calling Task multiple times in parallel:
 
 ```
 // All three spawn simultaneously
-Task({ prompt: "Task A", ... })  // result -> a
-Task({ prompt: "Task B", ... })  // result -> b
-Task({ prompt: "Task C", ... })  // result -> c
+sessions_spawn({ task: "Task A", ... })  // result -> a
+sessions_spawn({ task: "Task B", ... })  // result -> b
+sessions_spawn({ task: "Task C", ... })  // result -> c
 // Wait for all to complete, then continue
 ```
 
@@ -708,24 +680,20 @@ operator approval before fetching.
 Use the `use` statement to import a program:
 
 ```prose
-use "alice/research"
+use "@alice/research"
 use "bob/critique" as critic
 ```
 
-The import path can be a registry reference (`handle/slug`) or a direct HTTP(S)
+The import path is a local file path
 URL. An optional alias (`as name`) allows referencing by a shorter name.
 
-### Program URL Resolution
+### Program Path Resolution
 
 When the VM encounters a `use` statement:
 
-1. Resolve the import target.
-2. If the target is remote (`http://`, `https://`, or registry shorthand), pause
-   before fetching and require the operator to approve the full remote import
-   list with `approve remote prose imports` for this run.
-3. Fetch the program only after approval.
-4. Parse the program to extract its contract (inputs/outputs).
-5. Register the program in the Import Registry.
+1. Resolve the import target as a local file path.
+2. Parse the program to extract its contract (inputs/outputs).
+3. Register the program in the Import Registry.
 
 ### Input Declarations
 
@@ -818,7 +786,7 @@ The `output` keyword:
 Call an imported program by providing its inputs:
 
 ```prose
-use "alice/research" as research
+use "@alice/research" as research
 
 let result = research(topic: "quantum computing")
 ```
@@ -1190,28 +1158,28 @@ function execute(program, inputs?):
 
 ## Implementation Notes
 
-### Task Tool Usage
+### sessions_spawn Usage
 
-Always use Task for session execution:
+Always use sessions_spawn for session execution:
 
 ```
-Task({
-  description: "OpenProse session",
-  prompt: "<session prompt with context>",
-  subagent_type: "general-purpose",
-  model: "<optional model override>"
-})
+sessions_spawn(
+  task: "<session prompt with context>",
+  label: "OpenProse session",
+  model: "<optional model override>",
+  runtime: 'subagent'
+)
 ```
 
 ### Parallel Execution
 
-Make multiple Task calls in a single response for true concurrency:
+Make multiple sessions_spawn calls in a single response for true concurrency:
 
 ```
 // In one response, call all three:
-Task({ prompt: "A" })
-Task({ prompt: "B" })
-Task({ prompt: "C" })
+sessions_spawn({ task: "A" })
+sessions_spawn({ task: "B" })
+sessions_spawn({ task: "C" })
 ```
 
 ### Context Serialization
@@ -1234,7 +1202,7 @@ The OpenProse VM:
 3. **Parses** the program structure
 4. **Collects** definitions (agents, blocks)
 5. **Executes** statements sequentially
-6. **Spawns** sessions via Task tool
+6. **Spawns** sessions via sessions_spawn
 7. **Resumes** persistent agents with memory
 8. **Invokes** imported programs with inputs, receives outputs
 9. **Coordinates** parallel execution

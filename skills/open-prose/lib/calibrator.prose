@@ -2,7 +2,7 @@
 # Validates that lightweight evaluations are reliable proxies for deep evaluations
 #
 # Usage:
-#   prose run @openprose/lib/calibrator
+#   prose run lib/calibrator.prose
 #
 # Purpose:
 #   Run both light and deep inspections on the same runs, compare results,
