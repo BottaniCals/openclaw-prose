@@ -209,10 +209,7 @@ For variable resolution across scopes:
 ### Program Imports
 
 ```
-[Import] Importing: @alice/research
-   Remote dependency requires approval: https://p.prose.md/@alice/research
-   Operator approved: approve remote prose imports
-   Fetching from: https://p.prose.md/@alice/research
+[Import] Importing: lib/research.prose
    Inputs expected: [topic, depth]
    Outputs provided: [findings, sources]
    Registered as: research

@@ -23,7 +23,6 @@ This document defines how to execute OpenProse programs. You are the OpenProse V
 - Upstream spec's `Task` tool == OpenClaw `sessions_spawn`
 - **File I/O** == OpenClaw `read`/`write`
 - **Shell execution** == OpenClaw `exec`
-- **Remote fetch** == OpenClaw `web_fetch` (or `exec` with curl when POST is required)
 - **Model names** == OpenClaw model identifiers (e.g., `minimax`, `sonnet`, `opus`, `haiku`)
 
 ## CLI Commands
@@ -33,43 +32,11 @@ OpenProse is invoked via `prose` commands:
 | Command                  | Action                            |
 | ------------------------ | --------------------------------- |
 | `prose run <file.prose>` | Execute a local `.prose` program  |
-| `prose run @handle/slug`  | Fetch from registry and execute   |
 | `prose compile <file>`   | Validate syntax without executing |
 | `prose help`             | Show help and examples            |
 | `prose examples`         | List or run bundled examples      |
 | `prose update`           | Migrate legacy workspace files    |
 
-### Remote Programs
-
-You can run any `.prose` program from a URL or registry reference:
-
-```bash
-# Direct URL — any fetchable URL works
-prose run https://raw.githubusercontent.com/openprose/prose/main/skills/open-prose/examples/48-habit-miner.prose
-
-# Registry shorthand — @handle/slug resolves to p.prose.md
-prose run @irl-danb/habit-miner     # Fetches https://p.prose.md/@irl-danb/habit-miner
-prose run @alice/code-review        # Fetches https://p.prose.md/@alice/code-review
-```
-
-Top-level remote runs are explicit user requests. Remote `use` statements are transitive code dependencies. Before fetching any remote `use` target, collect the exact resolved targets, show them to the operator, and require the operator to reply exactly `approve remote prose imports` for this run. If approval is not given, abort the run before fetching, parsing, registering, or executing the remote imports.
-
-Executable statements (`shell`, `python`, `javascript`, `bash`, `powershell`, `exec`) run arbitrary commands on the host. Before executing any executable statement, list the resolved commands, show them to the operator, and require the operator to reply exactly `approve executable statements` for this run. If approval is not given, skip execution and fail the statement.
-
-**Resolution rules:**
-
-- Starts with `http://` or `https://` → fetch directly
-- Starts with `@` → resolve to `https://p.prose.md/@handle/slug`
-- Otherwise → treat as local file path
-
-This same resolution applies to `use` statements inside programs:
-
-```prose
-use "https://example.com/my-program.prose"  # Direct URL
-use "@alice/research" as research             # Registry shorthand
-```
-
----
 
 ## Why This Is a VM
 
@@ -121,7 +88,7 @@ Traditional dependency injection containers wire up components from configuratio
 
 | Declared Primitive          | Your Responsibility                                                     |
 | --------------------------- | ----------------------------------------------------------------------- |
-| `use "@handle/slug" as name` | Resolve import, require approval if remote, register in Import Registry |
+| `use "path/to/file.prose" as name` | Resolve import as a local file path, register in Import Registry |
 | `input topic: "..."`        | Bind value from caller, make available as variable                      |
 | `output findings = ...`     | Mark value as output, return to caller on completion                    |
 | `agent researcher:`         | Register this agent template for later use                              |
@@ -717,20 +684,16 @@ use "@alice/research"
 use "bob/critique" as critic
 ```
 
-The import path can be a registry reference (`@handle/slug`) or a direct HTTP(S)
+The import path is a local file path
 URL. An optional alias (`as name`) allows referencing by a shorter name.
 
-### Program URL Resolution
+### Program Path Resolution
 
 When the VM encounters a `use` statement:
 
-1. Resolve the import target.
-2. If the target is remote (`http://`, `https://`, or registry shorthand), pause
-   before fetching and require the operator to approve the full remote import
-   list with `approve remote prose imports` for this run.
-3. Fetch the program only after approval.
-4. Parse the program to extract its contract (inputs/outputs).
-5. Register the program in the Import Registry.
+1. Resolve the import target as a local file path.
+2. Parse the program to extract its contract (inputs/outputs).
+3. Register the program in the Import Registry.
 
 ### Input Declarations
 

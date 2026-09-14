@@ -105,7 +105,7 @@ The following features are implemented:
 | Simple session         | Implemented | `session "prompt"`                           |
 | Agent definitions      | Implemented | `agent name:` with model/prompt properties   |
 | Session with agent     | Implemented | `session: agent` with property overrides     |
-| Use statements         | Implemented | `use "@handle/slug" as name`                 |
+| Use statements         | Implemented | `use "path/to/file.prose" as name`           |
 | Agent skills           | Implemented | `skills: ["skill1", "skill2"]`               |
 | Agent permissions      | Implemented | `permissions:` block with rules              |
 | Let binding            | Implemented | `let name = session "..."`                   |
@@ -339,23 +339,21 @@ Please provide final recommendations.
 
 ## Use Statements (Program Composition)
 
-Use statements import other OpenProse programs from registry paths or direct
+Use statements import other OpenProse programs from local file
 HTTP(S) URLs, enabling modular workflows.
 
 ### Syntax
 
 ```prose
-use "@handle/slug"
-use "@handle/slug" as alias
-use "https://example.com/program.prose" as alias
+use "lib/inspector.prose" as inspector
+use "lib/program-improver.prose" as improver
 ```
 
 ### Path Format
 
-Import paths are either registry references or direct HTTP(S) URLs:
+Import paths are local file paths (relative to the importing program or absolute):
 
-- `@handle/slug` identifies a program author/organization and slug.
-- `https://example.com/program.prose` fetches that exact URL after approval.
+- The path resolves to a local `.prose` file.
 
 An optional alias (`as name`) allows referencing by a shorter name.
 
@@ -374,19 +372,15 @@ use "@bob/critique" as critic
 When the OpenProse VM encounters a `use` statement:
 
 1. Resolve the import target.
-2. If the target is remote (`http://`, `https://`, or registry shorthand), pause
-   before fetching and require the operator to approve the full remote import
-   list with `approve remote prose imports` for this run.
-3. Fetch the program only after approval.
-4. Parse the program to extract its contract (inputs/outputs).
-5. Register the program in the Import Registry.
+2. Parse the program to extract its contract (inputs/outputs).
+3. Register the program in the Import Registry.
 
 ### Validation Rules
 
 | Check                 | Severity | Message                                |
 | --------------------- | -------- | -------------------------------------- |
 | Empty path            | Error    | Use path cannot be empty               |
-| Invalid path format   | Error    | Path must be registry path or URL      |
+| Invalid path format   | Error    | Path must be a local file path          |
 | Duplicate import      | Error    | Program already imported               |
 | Missing alias for dup | Error    | Alias required when importing multiple |
 

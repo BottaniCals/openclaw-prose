@@ -9,11 +9,10 @@ OpenProse is a programming language for AI sessions. LLMs are simulators—when 
 
 ## OpenClaw Runtime Mapping
 
-- Upstream spec's `Task` tool == OpenClaw `sessions_spawn`
+- **Task tool** in the upstream spec == OpenClaw `sessions_spawn`
 - **File I/O** == OpenClaw `read`/`write`
 - **Shell execution** == OpenClaw `exec`
-- **Remote fetch** == OpenClaw `web_fetch` (or `exec` with curl when POST is required)
-- **Model names** == OpenClaw model identifiers (e.g., `minimax`, `sonnet`, `opus`, `haiku`)
+- **Model names** == OpenClaw model identifiers (any model registered in OpenClaw)
 
 ## When to Activate
 
@@ -30,15 +29,14 @@ Activate this skill when the user:
 
 When a user invokes `prose <command>`, intelligently route based on intent:
 
-| Command                 | Action                                                        |
-| ----------------------- | ------------------------------------------------------------- |
-| `prose help`            | Load `help.md`, guide user to what they need                  |
-| `prose run <file>`      | Load VM (`prose.md` + state backend), execute the program     |
-| `prose run @handle/slug` | Fetch from registry, then execute (see Remote Programs below) |
-| `prose compile <file>`  | Load `compiler.md`, validate the program                      |
-| `prose update`          | Run migration (see Migration section below)                   |
-| `prose examples`        | Show or run example programs from `examples/`                 |
-| Other                   | Intelligently interpret based on context                      |
+| Command                  | Action                                                        |
+| ------------------------ | ------------------------------------------------------------- |
+| `prose help`             | Load `help.md`, guide user to what they need                  |
+| `prose run <file>`       | Load VM (`prose.md` + state backend), execute the program     |
+| `prose compile <file>`   | Load `compiler.md`, validate the program                      |
+| `prose update`           | Run migration (see Migration section below)                   |
+| `prose examples`         | Show or run example programs from `examples/`                 |
+| Other                    | Intelligently interpret based on context                      |
 
 ### Important: Single Skill
 
@@ -63,55 +61,6 @@ There is only ONE skill: `prose`. There are NO separate skills like `prose-run`,
 | pipeline | `examples/21-pipeline-operations.prose` |
 | error, retry | `examples/22-error-handling.prose` |
 
-### Remote Programs
-
-You can run any `.prose` program from a URL or registry reference:
-
-```bash
-# Direct URL — any fetchable URL works
-prose run https://raw.githubusercontent.com/openprose/prose/main/skills/open-prose/examples/48-habit-miner.prose
-
-# Registry shorthand — @handle/slug resolves to p.prose.md
-prose run @irl-danb/habit-miner
-prose run @alice/code-review
-```
-
-**Resolution rules:**
-
-| Input                               | Resolution                                          |
-| ----------------------------------- | --------------------------------------------------- |
-| Starts with `http://` or `https://` | Fetch directly from URL                             |
-| Starts with `@`                     | Resolve to `https://p.prose.md/@handle/slug`       |
-| Otherwise                           | Treat as local file path                            |
-
-**Steps for remote programs:**
-
-1. Apply resolution rules above
-2. Fetch the `.prose` content
-3. Load the VM and execute as normal
-
-Top-level remote runs are explicit user requests. Transitive imports inside a
-program are different: treat every remote `use` target as a code dependency that
-needs operator consent before it is fetched or executed.
-
-This same resolution applies to `use` statements inside `.prose` files, but the
-VM must fail closed until the operator approves the remote dependency list:
-
-```prose
-use "https://example.com/my-program.prose"  # Direct URL
-use "@alice/research" as research            # Registry shorthand
-```
-
-When a program contains any remote `use` target (`http://`, `https://`, or
-registry shorthand):
-
-1. Collect and display the exact resolved remote targets.
-2. Explain that these are transitive code dependencies for this run.
-3. Ask the operator to reply exactly `approve remote prose imports` to continue.
-4. Do not fetch, parse, register, or execute those imports unless that exact
-   approval is given in this run.
-
----
 
 ## File Locations
 
