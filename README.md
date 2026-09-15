@@ -61,10 +61,11 @@ git clone https://github.com/BottaniCals/openclaw-prose.git \
   ~/.openclaw/skills/prose
 ```
 
-Then try a program:
+Then try a sample program from inside the cloned skill:
 
 ```
-prose run skills/prose/examples/01-hello-world.prose
+cd ~/.openclaw/skills/prose
+prose run examples/01-hello-world.prose
 ```
 
 > **By installing, you agree to the [Privacy Policy](PRIVACY.md) and [Terms of Service](TERMS.md).**
@@ -85,7 +86,7 @@ You never call these yourself when writing `.prose` files. The `prose` VM handle
 
 ### What changed in the OpenClaw fork
 
-- Skill renamed `open-prose` → **`prose`**. Update any activation rules or marketplace config accordingly.
+- Skill renamed `open-prose` → **`prose`**. Update any activation rules or marketplace config accordingly. The legacy `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` still label themselves `open-prose` — update their plugin entries if you're publishing through the plugin marketplace.
 - Skill files live under `skills/prose/`.
 - Remote registry (`@handle/slug`) and direct URL fetching are gone. The `use` statement now resolves only to **local file paths**.
 - Telemetry removed — nothing leaves your machine.
@@ -247,6 +248,7 @@ LLMs are simulators. Given a detailed system description, they don't just descri
 | `skills/prose/guidance/patterns.md`   | Best practices                       | When writing new `.prose`                   |
 | `skills/prose/guidance/antipatterns.md` | What to avoid                     | When writing new `.prose`                   |
 | `skills/prose/guidance/system-prompt.md` | VM-dedicated system prompts      | When launching a fresh VM sub-session       |
+| `skills/prose/primitives/session.md`   | Session context & compaction guidelines | When tuning how sessions carry context |
 | `skills/prose/alts/*.md`              | Narrative style packs                | Optional flavor for the VM                  |
 | `skills/prose/lib/`                   | Standard library programs            | When you want to `use` one                  |
 
