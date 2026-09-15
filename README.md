@@ -50,7 +50,7 @@ Forked from upstream at **[v0.7.1](https://github.com/openprose/prose/releases/t
 - **[v0.16.0](https://github.com/openprose/prose/releases/tag/v0.16.0)** — the Reactor harness moved to [openprose/reactor](https://github.com/openprose/reactor); `prose react`, the legacy `@openprose/prose-cli`, and `tools/cli/` were removed.
 - **[v0.17.0](https://github.com/openprose/prose/releases/tag/v0.17.0)** — added guided `prose init` and `prose compose` over an obligation-centered `std/ops/compose` package layout.
 
-This fork keeps the v0.7.1 embodied VM and re-targets it at OpenClaw. The language and state-backend layer remain upstream-compatible; the runtime mapping and the standard library are OpenClaw-specific. For upstream's later work, see the [CHANGELOG](https://github.com/openprose/prose/blob/main/CHANGELOG.md).
+This fork keeps the v0.7.1 **embodied in-session VM**. The **core language surface** — agents, sessions, control flow, `**...**` fourth wall, pipelines, blocks, persistence — carries forward, as do the filesystem / sqlite / postgres state backends. Anything from upstream's post-v0.7.1 direction doesn't apply here: not the `runtime_contract: 2` reconciler, not the obligation-centered `std/ops/compose` authoring layout, not `prose init` / `prose compose`, not the `### Maintains` / `### Requires` contract blocks, not the `prose compile` → `prose serve` → `prose run` host-process topology. Treat `.prose` programs written here as **language-compatible with v0.7.1** — not with anything upstream released after January 2026. The runtime mapping and the standard library are OpenClaw-specific. For upstream's later work, see the [CHANGELOG](https://github.com/openprose/prose/blob/main/CHANGELOG.md).
 
 ## Install
 
@@ -264,7 +264,10 @@ You can use `**...**` for that. But complex workflows need unambiguous structure
 Traditional IoC containers (Spring, Guice) wire up dependencies from configuration. Prose's container is an OpenClaw agent session that wires up agents using *understanding*. It doesn't just match names — it understands context, intent, and can make intelligent decisions about execution.
 
 **Why OpenClaw-specific?**
-The upstream OpenProse spec was harness-agnostic. OpenClaw has first-class primitives (`sessions_spawn`, `read`/`write`, `exec`, `web_fetch`) that map cleanly onto the VM, so this fork ships with a tighter runtime mapping and an OpenClaw-native standard library. Programs written against the language spec still run.
+OpenClaw has first-class primitives (`sessions_spawn`, `read`/`write`, `exec`, `web_fetch`) that map cleanly onto the v0.7.1 embodied VM. So this fork ships with a tighter runtime mapping and an OpenClaw-native standard library. We deliberately stayed on the pre-pivot embodied model — the post-v0.7.1 reconciler (`runtime_contract: 2`) and obligation-centered authoring layout don't fit how OpenClaw sessions are structured.
+
+**Can I run a `.prose` file written against modern upstream?**
+No, not unmodified. Programs written against the `runtime_contract: 2` reconciler, that use the `std/ops/compose` package layout, or that depend on `prose init` / `prose compose` / the `### Maintains` / `### Requires` contract blocks need upstream's reconciler topology. Programs written against the v0.7.1 embodied surface (agents, sessions, control flow, `**...**`, pipelines, blocks) run here with the OpenClaw runtime mapping applied on top. If a program needs the pivot-era model, use upstream.
 
 **Where's my agent state?**
 - **Project-scoped** agents live under `.prose/agents/` in your working directory.
