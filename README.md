@@ -68,7 +68,7 @@ cd ~/.openclaw/skills/prose
 prose run examples/01-hello-world.prose
 ```
 
-> **By installing, you agree to the [Privacy Policy](PRIVACY.md) and [Terms of Service](TERMS.md).**
+> **By installing, you agree to the [Terms of Service](TERMS.md).**
 
 ## The OpenClaw Runtime Mapping
 
@@ -280,6 +280,5 @@ OpenClaw Prose is in **beta**. Expect rough edges. Report issues at [github.com/
 You are responsible for all actions performed by AI agents you spawn through Prose. Review your `.prose` programs before execution and verify all outputs.
 
 - [MIT License](LICENSE)
-- [Privacy Policy](PRIVACY.md)
 - [Terms of Service](TERMS.md)
 - [Contributing](CONTRIBUTING.md)
