@@ -40,7 +40,17 @@ loop until **the draft meets publication standards** (max: 3):
 
 **OpenClaw Prose** is the `prose` skill for [OpenClaw](https://github.com/openclaw). It's a structured language for orchestrating AI agents from inside an OpenClaw agent session. You declare agents, control flow, and intent — the running OpenClaw session becomes the interpreter and wires the rest up. The session itself is the Inversion-of-Control container.
 
-This repo is the OpenClaw-native continuation of [openprose/prose](https://github.com/openprose/prose). The language and VM are upstream-compatible; the runtime mapping and the standard library are OpenClaw-specific.
+This repo is the OpenClaw-native continuation of [openprose/prose](https://github.com/openprose/prose).
+
+### Fork point
+
+Forked from upstream at **[v0.7.1](https://github.com/openprose/prose/releases/tag/v0.7.1)** (January 2026). Since then, upstream has pivoted away from the embodied in-session VM model that this fork keeps:
+
+- **[skill-v0.15.0](https://github.com/openprose/prose/releases/tag/skill-v0.15.0)** — *Intelligent React overhaul*: the in-session `judge → verdict → pressure → fulfillment` loop was replaced by a deterministic reconciler (`runtime_contract: 1 → 2`).
+- **[v0.16.0](https://github.com/openprose/prose/releases/tag/v0.16.0)** — the Reactor harness moved to [openprose/reactor](https://github.com/openprose/reactor); `prose react`, the legacy `@openprose/prose-cli`, and `tools/cli/` were removed.
+- **[v0.17.0](https://github.com/openprose/prose/releases/tag/v0.17.0)** — added guided `prose init` and `prose compose` over an obligation-centered `std/ops/compose` package layout.
+
+This fork keeps the v0.7.1 embodied VM and re-targets it at OpenClaw. The language and state-backend layer remain upstream-compatible; the runtime mapping and the standard library are OpenClaw-specific. For upstream's later work, see the [CHANGELOG](https://github.com/openprose/prose/blob/main/CHANGELOG.md).
 
 ## Install
 
