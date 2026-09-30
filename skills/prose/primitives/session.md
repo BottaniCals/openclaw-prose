@@ -290,6 +290,8 @@ If you receive very large task context (big code blocks, long documents):
 2. **Note what you examined** — "Reviewed lines 1-200, focused on auth flow"
 3. **Record specific locations** — future sessions can re-examine if needed
 
+> **Scope:** This guidance covers **task context** (variable bindings, file contents, document excerpts) that you, the subagent, receive at session start. It does **not** authorize the VM to truncate, summarize, or rewrite the agent's `prompt:` or session's `prompt:` you were spawned with — those are the agent's contract and the VM passes them verbatim.
+
 ---
 
 ## 5. Signaling to the VM

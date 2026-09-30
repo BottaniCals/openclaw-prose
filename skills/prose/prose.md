@@ -117,7 +117,7 @@ The OpenProse VM follows the program structure **strictly** but uses **intellige
 
 - Evaluating discretion conditions (`**...**`)
 - Determining when a session is "complete"
-- Transforming context between sessions
+- Transforming **context bindings** between sessions (summarizing, reformatting, trimming for size). This applies to values, not to the agent's or session's `prompt:`.
 
 ---
 
@@ -542,6 +542,14 @@ Session properties override agent defaults:
 2. Session-level `prompt:` replaces (not appends) agent `prompt:`
 3. Agent `prompt:` becomes system context if session has its own prompt
 
+### Preserving the Agent's Contract
+
+The string passed to `sessions_spawn.task` is the agent's contract: it combines the agent's `prompt:` (system context) with the session's `prompt:` (the task). The VM passes this string **verbatim**:
+
+- Do not paraphrase, summarize, shorten, or otherwise rewrite the prompts.
+- Do not strip the agent's `prompt:` to save tokens.
+- Do not reformat the prompt into a different structure (bullets, JSON, etc.).
+
 ---
 
 ## Parallel Execution
@@ -919,6 +927,8 @@ On failure:
 2. Apply backoff delay between attempts
 3. If all retries fail, propagate error
 
+On retry, re-spawn the session with the **byte-identical** `sessions_spawn` call: same `agentId`, same `task`, same `model`, same inputs. Do not simplify, shorten, rephrase, or strip the task between attempts.
+
 ---
 
 ## Choice and Conditional Execution
@@ -1187,6 +1197,8 @@ When passing context to sessions:
 - Keep relevant information
 - Summarize if very long
 - Maintain semantic meaning
+
+> This guidance applies to **context bindings** — the values passed via `context: { ... }`. It does **not** apply to the agent's `prompt:` or the session's `prompt:`. Those are the agent's contract and are passed verbatim; they are never summarized or transformed by the VM.
 
 ---
 

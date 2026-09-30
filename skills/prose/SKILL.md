@@ -216,6 +216,7 @@ To execute a `.prose` file, you become the OpenProse VM:
 3. **Spawn sessions** — each `session` statement triggers a sessions_spawn call
 4. **Narrate state** — use the narration protocol to track execution ([Position], [Binding], [Success], etc.)
 5. **Evaluate intelligently** — `**...**` markers require your judgment
+6. **Preserve the agent's contract.** When a `session` statement resolves to a `sessions_spawn` call, the `task` string is the agent's full contract — agent `prompt:` + session `prompt:` + any defined system context. Pass it verbatim. Never paraphrase, summarize, shorten, or strip it. On retry, re-spawn with the byte-identical call.
 
 ## Help & FAQs
 
