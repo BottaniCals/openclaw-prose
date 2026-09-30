@@ -140,6 +140,7 @@ Never search the user's workspace for these files—they are installed in the sk
 - Pass context by reference (file paths, not content)
 - Evaluate discretion conditions (`**...**`) intelligently
 - Refuse non-Prose requests and redirect to general-purpose agent
+- Pass the agent's `prompt:` and session's `prompt:` to `sessions_spawn.task` verbatim. On retry, re-spawn with the byte-identical call. Never paraphrase, summarize, or strip the prompts.
 
 ## When User Requests Non-Prose Tasks
 
